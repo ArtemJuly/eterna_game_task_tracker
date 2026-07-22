@@ -25,6 +25,8 @@ export function seedIfEmpty(): void {
       eternas: 80,
       createdAt: iso(20),
       completedAt: null,
+      isSprint: true,
+      isActive: true,
     },
     {
       id: projIdThesis,
@@ -36,6 +38,8 @@ export function seedIfEmpty(): void {
       eternas: 120,
       createdAt: iso(18),
       completedAt: null,
+      isSprint: false,
+      isActive: true,
     },
     {
       id: projIdHealth,
@@ -47,12 +51,17 @@ export function seedIfEmpty(): void {
       eternas: 60,
       createdAt: iso(15),
       completedAt: null,
+      isSprint: false,
+      isActive: false,
     },
   ];
+
+  const todayStr = new Date(now).toISOString().slice(0, 10);
 
   const doneTask: Task = {
     id: generateId(),
     title: 'Отправить пакет документов по диссертации',
+    description: '',
     projectId: projIdThesis,
     parentTaskId: null,
     status: 'done',
@@ -61,6 +70,9 @@ export function seedIfEmpty(): void {
     createdAt: iso(5),
     completedAt: iso(2),
     focusDate: null,
+    recurrenceIntervalDays: null,
+    nextDueDate: null,
+    streakCount: 0,
   };
 
   const conceptTaskId = generateId();
@@ -69,6 +81,8 @@ export function seedIfEmpty(): void {
     {
       id: conceptTaskId,
       title: 'Подготовить концепцию проекта для руководителя',
+      description:
+        'Нужно предложить руководителю альтернативный подход к текущей модели: короткая концепция на 2-3 страницы, с акцентом на риски и ожидаемый эффект.',
       projectId: projIdDirector,
       parentTaskId: null,
       status: 'planned',
@@ -77,10 +91,14 @@ export function seedIfEmpty(): void {
       createdAt: iso(4),
       completedAt: null,
       focusDate: null,
+      recurrenceIntervalDays: null,
+      nextDueDate: null,
+      streakCount: 0,
     },
     {
       id: generateId(),
       title: 'Собрать примеры аналогичных проектов',
+      description: '',
       projectId: projIdDirector,
       parentTaskId: conceptTaskId,
       status: 'done',
@@ -89,10 +107,14 @@ export function seedIfEmpty(): void {
       createdAt: iso(4),
       completedAt: iso(3),
       focusDate: null,
+      recurrenceIntervalDays: null,
+      nextDueDate: null,
+      streakCount: 0,
     },
     {
       id: generateId(),
       title: 'Набросать структуру презентации',
+      description: '',
       projectId: projIdDirector,
       parentTaskId: conceptTaskId,
       status: 'planned',
@@ -101,10 +123,14 @@ export function seedIfEmpty(): void {
       createdAt: iso(4),
       completedAt: null,
       focusDate: null,
+      recurrenceIntervalDays: null,
+      nextDueDate: null,
+      streakCount: 0,
     },
     {
       id: generateId(),
       title: 'Собрать данные для альтернативной модели',
+      description: '',
       projectId: projIdDirector,
       parentTaskId: null,
       status: 'planned',
@@ -113,10 +139,14 @@ export function seedIfEmpty(): void {
       createdAt: iso(3),
       completedAt: null,
       focusDate: null,
+      recurrenceIntervalDays: null,
+      nextDueDate: null,
+      streakCount: 0,
     },
     {
       id: generateId(),
       title: 'Сходить в зал',
+      description: 'Силовая тренировка, 40-60 минут.',
       projectId: projIdHealth,
       parentTaskId: null,
       status: 'planned',
@@ -125,10 +155,14 @@ export function seedIfEmpty(): void {
       createdAt: iso(2),
       completedAt: null,
       focusDate: null,
+      recurrenceIntervalDays: 1,
+      nextDueDate: todayStr,
+      streakCount: 3,
     },
     {
       id: generateId(),
       title: 'Написать пост',
+      description: '',
       projectId: null,
       parentTaskId: null,
       status: 'planned',
@@ -137,6 +171,9 @@ export function seedIfEmpty(): void {
       createdAt: iso(1),
       completedAt: null,
       focusDate: null,
+      recurrenceIntervalDays: null,
+      nextDueDate: null,
+      streakCount: 0,
     },
     doneTask,
   ];

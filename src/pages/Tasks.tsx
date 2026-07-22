@@ -1,15 +1,19 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTasks } from '../hooks/useTasks';
+import type { NewTaskInput } from '../hooks/useTasks';
 import { useProjects } from '../hooks/useProjects';
 import { useConfirm } from '../hooks/useConfirm';
 import type { Task, TaskStatus } from '../types';
+import { getDirectChildren } from '../utils/taskTree';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
-import ProgressBar from '../components/ui/ProgressBar';
 import TaskModal from '../components/TaskModal';
 import PomodoroTimer from '../components/PomodoroTimer';
 import TodayFocusButton from '../components/TodayFocusButton';
 import { getTodayDateString } from '../utils/today';
+import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier } from '../utils/taskRewards';
+import { formatRecurrence, getStreakStars, isTaskOverdue } from '../utils/recurrence';
 
 type FilterTab = 'all' | TaskStatus;
 
@@ -35,6 +39,7 @@ const STATUS_TONE: Record<TaskStatus, 'muted' | 'xp' | 'success' | 'danger'> = {
 };
 
 export default function Tasks() {
+  const navigate = useNavigate();
   const { tasks, addTask, updateTask, startTask, completeTask, cancelTask, deleteTask, toggleFocus } = useTasks();
   const { projects } = useProjects();
   const { confirm, dialog } = useConfirm();
@@ -42,20 +47,7 @@ export default function Tasks() {
   const [projectFilter, setProjectFilter] = useState<string>('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const today = getTodayDateString();
-
-  function toggleCollapsed(id: string) {
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }
 
   const filtered = useMemo(() => {
     return tasks
@@ -69,9 +61,6 @@ export default function Tasks() {
       });
   }, [tasks, tab, projectFilter, today]);
 
-  const filteredIds = useMemo(() => new Set(filtered.map((t) => t.id)), [filtered]);
-  const topLevelRows = filtered.filter((t) => !t.parentTaskId || !filteredIds.has(t.parentTaskId));
-
   function openCreate() {
     setEditingTask(null);
     setModalOpen(true);
@@ -82,14 +71,7 @@ export default function Tasks() {
     setModalOpen(true);
   }
 
-  function handleSubmit(input: {
-    title: string;
-    projectId: string | null;
-    parentTaskId: string | null;
-    xp: number;
-    eternas: number;
-    status: TaskStatus;
-  }) {
+  function handleSubmit(input: NewTaskInput) {
     if (editingTask) {
       updateTask(editingTask.id, input);
     } else {
@@ -108,7 +90,7 @@ export default function Tasks() {
   }
 
   function handleDelete(task: Task) {
-    const childCount = tasks.filter((t) => t.parentTaskId === task.id).length;
+    const childCount = getDirectChildren(tasks, task.id).length;
     confirm({
       title: 'Удалить задачу?',
       message:
@@ -119,87 +101,6 @@ export default function Tasks() {
       danger: true,
       onConfirm: () => deleteTask(task.id),
     });
-  }
-
-  function renderRow(task: Task, isSubtask: boolean) {
-    const project = projects.find((p) => p.id === task.projectId);
-    const isTerminal = task.status === 'done' || task.status === 'cancelled';
-    const isFocused = task.focusDate === today;
-    const children = tasks.filter((t) => t.parentTaskId === task.id && t.status !== 'cancelled');
-    const doneChildren = children.filter((t) => t.status === 'done').length;
-    const orphanParent =
-      !isSubtask && task.parentTaskId ? tasks.find((t) => t.id === task.parentTaskId) : undefined;
-
-    return (
-      <div
-        key={task.id}
-        className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${
-          task.status === 'cancelled' ? 'opacity-60' : ''
-        } ${isFocused ? 'border-accent-xp/50 bg-accent-xp/[0.04]' : 'border-border bg-surface'}`}
-      >
-        <TodayFocusButton active={isFocused} onClick={() => toggleFocus(task.id)} />
-        <div className="flex flex-1 flex-col gap-1.5">
-          <button
-            onClick={() => openEdit(task)}
-            className={`text-left font-medium hover:underline ${
-              isTerminal ? 'text-text-muted line-through' : 'text-text-primary'
-            }`}
-          >
-            {task.title}
-          </button>
-          <div className="flex items-center gap-2">
-            {project && <Badge tone="default">{project.title}</Badge>}
-            {orphanParent && <Badge tone="muted">↳ {orphanParent.title}</Badge>}
-            <Badge tone={STATUS_TONE[task.status]}>{STATUS_LABEL[task.status]}</Badge>
-            {isFocused && (task.status === 'planned' || task.status === 'in_progress') ? (
-              <span className="text-sm text-accent-xp tabular-nums">
-                ⭐×2 {task.xp * 2} XP · {task.eternas * 2} ✦
-              </span>
-            ) : (
-              <span className="text-sm text-text-muted tabular-nums">
-                {task.xp} XP · {task.eternas} ✦
-              </span>
-            )}
-          </div>
-          {children.length > 0 && (
-            <button
-              onClick={() => toggleCollapsed(task.id)}
-              className="flex items-center gap-2 text-left hover:opacity-80"
-            >
-              <span className="text-xs text-text-muted">{collapsed.has(task.id) ? '▸' : '▾'}</span>
-              <span className="text-xs text-text-muted tabular-nums">
-                {doneChildren}/{children.length} подзадач
-              </span>
-              <div className="w-24">
-                <ProgressBar percent={Math.round((doneChildren / children.length) * 100)} />
-              </div>
-            </button>
-          )}
-          <PomodoroTimer taskId={task.id} active={task.status === 'planned' || task.status === 'in_progress'} />
-        </div>
-
-        <div className="flex items-center gap-2">
-          {task.status === 'planned' && (
-            <Button variant="secondary" onClick={() => startTask(task.id)}>
-              В работу
-            </Button>
-          )}
-          {(task.status === 'planned' || task.status === 'in_progress') && (
-            <Button variant="primary" onClick={() => completeTask(task.id)}>
-              Выполнить
-            </Button>
-          )}
-          {(task.status === 'planned' || task.status === 'in_progress') && (
-            <Button variant="danger" onClick={() => handleCancel(task)}>
-              Отменить
-            </Button>
-          )}
-          <Button variant="ghost" onClick={() => handleDelete(task)}>
-            Удалить
-          </Button>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -243,21 +144,99 @@ export default function Tasks() {
       </div>
 
       <div className="flex flex-col gap-2">
-        {topLevelRows.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
             Задач не найдено
           </div>
         ) : (
-          topLevelRows.map((task) => {
-            const children = filtered.filter((t) => t.parentTaskId === task.id);
+          filtered.map((task) => {
+            const project = projects.find((p) => p.id === task.projectId);
+            const parentTask = task.parentTaskId ? tasks.find((t) => t.id === task.parentTaskId) : undefined;
+            const isTerminal = task.status === 'done' || task.status === 'cancelled';
+            const isFocused = task.focusDate === today;
+            const children = getDirectChildren(tasks, task.id).filter((t) => t.status !== 'cancelled');
+            const doneChildren = children.filter((t) => t.status === 'done').length;
+            const rewardMultiplier = getTaskRewardMultiplier(task, projects, today);
+            const multiplierIcon = getMultiplierIcon(task, projects, today);
+
             return (
-              <div key={task.id} className="flex flex-col gap-2">
-                {renderRow(task, false)}
-                {children.length > 0 && !collapsed.has(task.id) && (
-                  <div className="ml-10 flex flex-col gap-2 border-l border-border pl-4">
-                    {children.map((child) => renderRow(child, true))}
+              <div
+                key={task.id}
+                onClick={() => navigate(`/tasks/${task.id}`)}
+                className={`group flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-white/[0.03] ${
+                  task.status === 'cancelled' ? 'opacity-60' : ''
+                } ${isFocused ? 'border-accent-xp/50 bg-accent-xp/[0.04]' : 'border-border bg-surface'}`}
+              >
+                <div onClick={(e) => e.stopPropagation()}>
+                  <TodayFocusButton active={isFocused} onClick={() => toggleFocus(task.id)} />
+                </div>
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <span
+                    className={`font-medium group-hover:underline ${
+                      isTerminal ? 'text-text-muted line-through' : 'text-text-primary'
+                    }`}
+                  >
+                    {task.title}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {project && <Badge tone="default">{project.title}</Badge>}
+                    {parentTask && <Badge tone="muted">↳ {parentTask.title}</Badge>}
+                    <Badge tone={STATUS_TONE[task.status]}>{STATUS_LABEL[task.status]}</Badge>
+                    {task.recurrenceIntervalDays !== null && (
+                      <Badge tone="muted">🔁 {formatRecurrence(task.recurrenceIntervalDays)}</Badge>
+                    )}
+                    {task.streakCount > 0 && <Badge tone="eternas">🔥 ×{task.streakCount}</Badge>}
+                    {getStreakStars(task.streakCount) > 0 && (
+                      <Badge tone="xp">{'⭐'.repeat(getStreakStars(task.streakCount))}</Badge>
+                    )}
+                    {isTaskOverdue(task, today) && <Badge tone="danger">Просрочено</Badge>}
+                    {rewardMultiplier !== 1 && (task.status === 'planned' || task.status === 'in_progress') ? (
+                      <span className="text-sm text-accent-xp tabular-nums">
+                        {multiplierIcon}×{formatMultiplier(rewardMultiplier)} {Math.round(task.xp * rewardMultiplier)} XP ·{' '}
+                        {Math.round(task.eternas * rewardMultiplier)} ✦
+                      </span>
+                    ) : (
+                      <span className="text-sm text-text-muted tabular-nums">
+                        {task.xp} XP · {task.eternas} ✦
+                      </span>
+                    )}
+                    {children.length > 0 && (
+                      <span className="text-xs text-text-muted tabular-nums">
+                        {doneChildren}/{children.length} подзадач
+                      </span>
+                    )}
                   </div>
-                )}
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <PomodoroTimer
+                      taskId={task.id}
+                      active={task.status === 'planned' || task.status === 'in_progress'}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  {task.status === 'planned' && (
+                    <Button variant="secondary" onClick={() => startTask(task.id)}>
+                      В работу
+                    </Button>
+                  )}
+                  {(task.status === 'planned' || task.status === 'in_progress') && (
+                    <Button variant="primary" onClick={() => completeTask(task.id)}>
+                      Выполнить
+                    </Button>
+                  )}
+                  {(task.status === 'planned' || task.status === 'in_progress') && (
+                    <Button variant="danger" onClick={() => handleCancel(task)}>
+                      Отменить
+                    </Button>
+                  )}
+                  <Button variant="secondary" onClick={() => openEdit(task)}>
+                    Редактировать
+                  </Button>
+                  <Button variant="ghost" onClick={() => handleDelete(task)}>
+                    Удалить
+                  </Button>
+                </div>
               </div>
             );
           })

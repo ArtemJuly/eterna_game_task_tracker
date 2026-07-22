@@ -32,4 +32,6 @@ export const settingsStore = createStore<Settings>(STORAGE_KEYS.settings, {
   pomodoroDurationMinutes: 25,
   pomodoroBonusXp: 5,
   pomodoroBonusEternas: 5,
+  streakBonusStepXp: 5,
+  streakBonusStepEternas: 5,
 });

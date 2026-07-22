@@ -1,4 +1,4 @@
-import type { HistoryEntry, PomodoroSession, Task } from '../types';
+import type { HistoryEntry, PomodoroSession } from '../types';
 
 export interface ChartPoint {
   label: string;
@@ -35,8 +35,8 @@ export function buildCumulativeSeries(
   return points;
 }
 
-export function buildTaskCompletionSeries(tasks: Task[], days: number): ChartPoint[] {
-  const doneTasks = tasks.filter((t) => t.status === 'done' && t.completedAt);
+export function buildTaskCompletionSeries(history: HistoryEntry[], days: number): ChartPoint[] {
+  const doneEntries = history.filter((e) => e.type === 'task_done');
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -46,8 +46,8 @@ export function buildTaskCompletionSeries(tasks: Task[], days: number): ChartPoi
     dayStart.setDate(dayStart.getDate() - i);
     const dayEnd = new Date(dayStart);
     dayEnd.setDate(dayEnd.getDate() + 1);
-    const count = doneTasks.filter((t) => {
-      const completedTime = new Date(t.completedAt as string).getTime();
+    const count = doneEntries.filter((e) => {
+      const completedTime = new Date(e.createdAt).getTime();
       return completedTime >= dayStart.getTime() && completedTime < dayEnd.getTime();
     }).length;
     points.push({ label: formatDayLabel(dayStart), value: count });

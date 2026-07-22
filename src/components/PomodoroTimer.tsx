@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { usePomodoros } from '../hooks/usePomodoros';
 import { formatRemaining } from '../utils/formatTime';
 import Button from './ui/Button';
@@ -30,8 +30,9 @@ export default function PomodoroTimer({ taskId, active }: PomodoroTimerProps) {
   const endTime = isRunningHere && activePomodoro?.endsAt ? new Date(activePomodoro.endsAt).getTime() : null;
   const pausedRemainingMs = isPausedHere || canResumeElsewhere ? (activePomodoro?.remainingMs ?? 0) : null;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isRunningHere) return;
+    setNow(Date.now());
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, [isRunningHere]);

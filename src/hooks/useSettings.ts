@@ -7,6 +7,8 @@ function normalizeSettings(raw: Settings): Settings {
     pomodoroDurationMinutes: raw.pomodoroDurationMinutes ?? 25,
     pomodoroBonusXp: raw.pomodoroBonusXp ?? 5,
     pomodoroBonusEternas: raw.pomodoroBonusEternas ?? 5,
+    streakBonusStepXp: raw.streakBonusStepXp ?? 5,
+    streakBonusStepEternas: raw.streakBonusStepEternas ?? 5,
   };
 }
 
@@ -15,6 +17,8 @@ export function useSettings(): {
   setPomodoroDuration: (minutes: number) => void;
   setPomodoroBonusXp: (xp: number) => void;
   setPomodoroBonusEternas: (eternas: number) => void;
+  setStreakBonusStepXp: (xp: number) => void;
+  setStreakBonusStepEternas: (eternas: number) => void;
 } {
   const [rawSettings, setSettings] = settingsStore.useStore();
   const settings = normalizeSettings(rawSettings);
@@ -31,5 +35,20 @@ export function useSettings(): {
     setSettings((prev) => ({ ...prev, pomodoroBonusEternas: eternas }));
   }
 
-  return { settings, setPomodoroDuration, setPomodoroBonusXp, setPomodoroBonusEternas };
+  function setStreakBonusStepXp(xp: number) {
+    setSettings((prev) => ({ ...prev, streakBonusStepXp: xp }));
+  }
+
+  function setStreakBonusStepEternas(eternas: number) {
+    setSettings((prev) => ({ ...prev, streakBonusStepEternas: eternas }));
+  }
+
+  return {
+    settings,
+    setPomodoroDuration,
+    setPomodoroBonusXp,
+    setPomodoroBonusEternas,
+    setStreakBonusStepXp,
+    setStreakBonusStepEternas,
+  };
 }

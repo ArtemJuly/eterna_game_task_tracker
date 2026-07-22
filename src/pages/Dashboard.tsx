@@ -14,6 +14,8 @@ import AreaChart from '../components/ui/AreaChart';
 import BarChart from '../components/ui/BarChart';
 import TodayFocusButton from '../components/TodayFocusButton';
 import { getTodayDateString } from '../utils/today';
+import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier } from '../utils/taskRewards';
+import { formatRecurrence, getStreakStars, isTaskOverdue } from '../utils/recurrence';
 
 export default function Dashboard() {
   const character = useCharacter();
@@ -27,7 +29,7 @@ export default function Dashboard() {
   const { level, next, xpIntoLevel, xpForLevel, percent } = getLevelProgress(character.totalXp);
   const pulse = pulseTs > 0 && Date.now() - pulseTs < 3000;
 
-  const taskCompletionSeries = buildTaskCompletionSeries(tasks, 14);
+  const taskCompletionSeries = buildTaskCompletionSeries(history, 14);
   const taskCompletionTotal = taskCompletionSeries.reduce((sum, p) => sum + p.value, 0);
 
   const pomodoroSeries = buildPomodoroSeries(sessions, 14);
@@ -158,9 +160,15 @@ export default function Dashboard() {
               <Link
                 key={project.id}
                 to={`/projects/${project.id}`}
-                className="rounded-lg border border-border bg-surface p-4 hover:bg-white/[0.04] transition-colors"
+                className={`rounded-lg border border-border bg-surface p-4 hover:bg-white/[0.04] transition-colors ${
+                  !project.isActive ? 'opacity-60' : ''
+                }`}
               >
-                <div className="font-medium text-text-primary">{project.title}</div>
+                <div className="flex items-center gap-1.5">
+                  {project.isSprint && <span>🚀</span>}
+                  {!project.isActive && <span>💤</span>}
+                  <div className="font-medium text-text-primary">{project.title}</div>
+                </div>
                 <div className="mt-1 text-sm text-text-muted tabular-nums">
                   {done}/{total} задач
                 </div>
@@ -182,6 +190,8 @@ export default function Dashboard() {
               const project = projects.find((p) => p.id === task.projectId);
               const parentTask = task.parentTaskId ? tasks.find((t) => t.id === task.parentTaskId) : undefined;
               const isFocused = task.focusDate === today;
+              const rewardMultiplier = getTaskRewardMultiplier(task, projects, today);
+              const multiplierIcon = getMultiplierIcon(task, projects, today);
               return (
                 <div
                   key={task.id}
@@ -195,9 +205,18 @@ export default function Dashboard() {
                     <div className="mt-1 flex items-center gap-2 text-sm text-text-muted">
                       {project && <span>{project.title}</span>}
                       {parentTask && <Badge tone="muted">↳ {parentTask.title}</Badge>}
-                      {isFocused ? (
+                      {task.recurrenceIntervalDays !== null && (
+                        <Badge tone="muted">🔁 {formatRecurrence(task.recurrenceIntervalDays)}</Badge>
+                      )}
+                      {task.streakCount > 0 && <Badge tone="eternas">🔥 ×{task.streakCount}</Badge>}
+                      {getStreakStars(task.streakCount) > 0 && (
+                        <Badge tone="xp">{'⭐'.repeat(getStreakStars(task.streakCount))}</Badge>
+                      )}
+                      {isTaskOverdue(task, today) && <Badge tone="danger">Просрочено</Badge>}
+                      {rewardMultiplier !== 1 ? (
                         <span className="text-accent-xp tabular-nums">
-                          ⭐×2 +{task.xp * 2} XP · +{task.eternas * 2} ✦
+                          {multiplierIcon}×{formatMultiplier(rewardMultiplier)} +{Math.round(task.xp * rewardMultiplier)} XP · +
+                          {Math.round(task.eternas * rewardMultiplier)} ✦
                         </span>
                       ) : (
                         <span className="tabular-nums">

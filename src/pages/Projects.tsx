@@ -6,9 +6,11 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import ProgressBar from '../components/ui/ProgressBar';
 import ProjectModal from '../components/ProjectModal';
+import SprintToggleButton from '../components/SprintToggleButton';
+import ActiveStatusToggle from '../components/ActiveStatusToggle';
 
 export default function Projects() {
-  const { projects, addProject } = useProjects();
+  const { projects, addProject, toggleSprint, toggleActive } = useProjects();
   const { tasks } = useTasks();
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -39,10 +41,15 @@ export default function Projects() {
               <Link
                 key={project.id}
                 to={`/projects/${project.id}`}
-                className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 hover:bg-white/[0.04] transition-colors"
+                className={`flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 hover:bg-white/[0.04] transition-colors ${
+                  !project.isActive ? 'opacity-60' : ''
+                }`}
               >
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                      <SprintToggleButton active={project.isSprint} onClick={() => toggleSprint(project.id)} />
+                    </div>
                     <div
                       className={`font-semibold ${
                         project.status === 'done' ? 'text-text-muted line-through' : 'text-text-primary'
@@ -51,8 +58,13 @@ export default function Projects() {
                       {project.title}
                     </div>
                     <Badge tone={project.status === 'done' ? 'success' : 'muted'}>
-                      {project.status === 'done' ? 'Завершён' : 'Активен'}
+                      {project.status === 'done' ? 'Завершён' : 'В процессе'}
                     </Badge>
+                    {project.status !== 'done' && (
+                      <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                        <ActiveStatusToggle active={project.isActive} onClick={() => toggleActive(project.id)} />
+                      </div>
+                    )}
                   </div>
                   {project.goal && <div className="mt-1 text-sm text-text-muted">{project.goal}</div>}
                   {project.deadline && (

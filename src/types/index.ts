@@ -8,6 +8,7 @@ export type TaskStatus = 'planned' | 'in_progress' | 'done' | 'cancelled';
 export interface Task {
   id: string;
   title: string;
+  description: string;
   projectId: string | null;
   parentTaskId: string | null;
   status: TaskStatus;
@@ -16,6 +17,9 @@ export interface Task {
   createdAt: string;
   completedAt: string | null;
   focusDate: string | null;
+  recurrenceIntervalDays: number | null;
+  nextDueDate: string | null;
+  streakCount: number;
 }
 
 export type ProjectStatus = 'active' | 'done';
@@ -30,6 +34,8 @@ export interface Project {
   eternas: number;
   createdAt: string;
   completedAt: string | null;
+  isSprint: boolean;
+  isActive: boolean;
 }
 
 export type RewardStatus = 'wanted' | 'saving' | 'available' | 'purchased' | 'cancelled';
@@ -81,4 +87,6 @@ export interface Settings {
   pomodoroDurationMinutes: number;
   pomodoroBonusXp: number;
   pomodoroBonusEternas: number;
+  streakBonusStepXp: number;
+  streakBonusStepEternas: number;
 }

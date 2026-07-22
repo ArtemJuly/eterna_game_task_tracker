@@ -3,55 +3,94 @@ import type { Task, TaskStatus } from '../types';
 import type { NewTaskInput } from '../hooks/useTasks';
 import { useProjects } from '../hooks/useProjects';
 import { useTasks } from '../hooks/useTasks';
+import { isDescendantOf } from '../utils/taskTree';
+import { RECURRENCE_PRESETS } from '../utils/recurrence';
 import Modal from './ui/Modal';
 import Button from './ui/Button';
+
+const PRESET_DAYS = RECURRENCE_PRESETS.map((p) => p.days);
+
+// select value is 'none', 'custom', or the interval as a string (e.g. '1', '7')
+function modeForInterval(intervalDays: number | null): string {
+  if (intervalDays === null) return 'none';
+  if (PRESET_DAYS.includes(intervalDays)) return String(intervalDays);
+  return 'custom';
+}
 
 interface TaskModalProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (input: NewTaskInput) => void;
   initialTask?: Task | null;
+  defaultProjectId?: string | null;
+  defaultParentTaskId?: string | null;
 }
 
-export default function TaskModal({ open, onClose, onSubmit, initialTask }: TaskModalProps) {
+export default function TaskModal({
+  open,
+  onClose,
+  onSubmit,
+  initialTask,
+  defaultProjectId,
+  defaultParentTaskId,
+}: TaskModalProps) {
   const { projects } = useProjects();
   const { tasks } = useTasks();
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [projectId, setProjectId] = useState<string>('');
   const [parentTaskId, setParentTaskId] = useState<string>('');
   const [xp, setXp] = useState(20);
   const [eternas, setEternas] = useState(5);
   const [status, setStatus] = useState<TaskStatus>('planned');
+  const [recurrenceMode, setRecurrenceMode] = useState('none');
+  const [customDays, setCustomDays] = useState(3);
 
   useEffect(() => {
     if (!open) return;
     setTitle(initialTask?.title ?? '');
-    setProjectId(initialTask?.projectId ?? '');
-    setParentTaskId(initialTask?.parentTaskId ?? '');
+    setDescription(initialTask?.description ?? '');
+    setProjectId(initialTask?.projectId ?? defaultProjectId ?? '');
+    setParentTaskId(initialTask?.parentTaskId ?? defaultParentTaskId ?? '');
     setXp(initialTask?.xp ?? 20);
     setEternas(initialTask?.eternas ?? 5);
     setStatus(initialTask?.status ?? 'planned');
-  }, [open, initialTask]);
+    const intervalDays = initialTask?.recurrenceIntervalDays ?? null;
+    setRecurrenceMode(modeForInterval(intervalDays));
+    if (intervalDays !== null && !PRESET_DAYS.includes(intervalDays)) setCustomDays(intervalDays);
+  }, [open, initialTask, defaultProjectId, defaultParentTaskId]);
 
-  const hasChildren = initialTask ? tasks.some((t) => t.parentTaskId === initialTask.id) : false;
-  const parentOptions = tasks.filter((t) => !t.parentTaskId && t.id !== initialTask?.id);
+  const parentOptions = tasks.filter((t) => {
+    if (!initialTask) return true;
+    if (t.id === initialTask.id) return false;
+    if (isDescendantOf(tasks, t.id, initialTask.id)) return false;
+    return true;
+  });
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
+    const recurrenceIntervalDays =
+      recurrenceMode === 'none' ? null : recurrenceMode === 'custom' ? Math.max(1, customDays) : Number(recurrenceMode);
     onSubmit({
       title: title.trim(),
+      description: description.trim(),
       projectId: projectId || null,
-      parentTaskId: hasChildren ? null : parentTaskId || null,
+      parentTaskId: parentTaskId || null,
       xp,
       eternas,
       status,
+      recurrenceIntervalDays,
     });
     onClose();
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={initialTask ? 'Редактировать задачу' : 'Новая задача'}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={initialTask ? 'Редактировать задачу' : defaultParentTaskId ? 'Новая подзадача' : 'Новая задача'}
+    >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
           <label className="mb-1 block text-sm text-text-muted">Название</label>
@@ -60,6 +99,17 @@ export default function TaskModal({ open, onClose, onSubmit, initialTask }: Task
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm text-text-muted">Описание</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            placeholder="Опишите, что нужно сделать..."
             className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
           />
         </div>
@@ -82,23 +132,44 @@ export default function TaskModal({ open, onClose, onSubmit, initialTask }: Task
 
         <div>
           <label className="mb-1 block text-sm text-text-muted">Родительская задача</label>
-          {hasChildren ? (
-            <p className="text-sm text-text-muted">
-              У этой задачи уже есть подзадачи, поэтому она не может сама быть подзадачей.
-            </p>
-          ) : (
-            <select
-              value={parentTaskId}
-              onChange={(e) => setParentTaskId(e.target.value)}
-              className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
-            >
-              <option value="">Нет — самостоятельная задача</option>
-              {parentOptions.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.title}
-                </option>
-              ))}
-            </select>
+          <select
+            value={parentTaskId}
+            onChange={(e) => setParentTaskId(e.target.value)}
+            className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+          >
+            <option value="">Нет — самостоятельная задача</option>
+            {parentOptions.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm text-text-muted">Повторение</label>
+          <select
+            value={recurrenceMode}
+            onChange={(e) => setRecurrenceMode(e.target.value)}
+            className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+          >
+            <option value="none">Нет — разовая задача</option>
+            {RECURRENCE_PRESETS.map((p) => (
+              <option key={p.days} value={p.days}>
+                {p.label}
+              </option>
+            ))}
+            <option value="custom">Свой интервал</option>
+          </select>
+          {recurrenceMode === 'custom' && (
+            <input
+              type="number"
+              min={1}
+              value={customDays}
+              onChange={(e) => setCustomDays(Number(e.target.value))}
+              placeholder="Каждые сколько дней"
+              className="mt-2 w-32 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary tabular-nums outline-none focus:border-accent-xp"
+            />
           )}
         </div>
 

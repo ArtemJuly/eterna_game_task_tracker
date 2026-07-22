@@ -14,11 +14,20 @@ import { pushToast } from '../hooks/useToast';
 import Button from '../components/ui/Button';
 
 export default function Settings() {
-  const { settings, setPomodoroDuration, setPomodoroBonusXp, setPomodoroBonusEternas } = useSettings();
+  const {
+    settings,
+    setPomodoroDuration,
+    setPomodoroBonusXp,
+    setPomodoroBonusEternas,
+    setStreakBonusStepXp,
+    setStreakBonusStepEternas,
+  } = useSettings();
   const { confirm, dialog } = useConfirm();
   const [durationInput, setDurationInput] = useState(String(settings.pomodoroDurationMinutes));
   const [bonusXpInput, setBonusXpInput] = useState(String(settings.pomodoroBonusXp));
   const [bonusEternasInput, setBonusEternasInput] = useState(String(settings.pomodoroBonusEternas));
+  const [streakStepXpInput, setStreakStepXpInput] = useState(String(settings.streakBonusStepXp));
+  const [streakStepEternasInput, setStreakStepEternasInput] = useState(String(settings.streakBonusStepEternas));
 
   function handleDurationBlur() {
     const minutes = Math.max(1, Math.min(180, Number(durationInput) || settings.pomodoroDurationMinutes));
@@ -36,6 +45,18 @@ export default function Settings() {
     const eternas = Math.max(0, Number(bonusEternasInput) || 0);
     setPomodoroBonusEternas(eternas);
     setBonusEternasInput(String(eternas));
+  }
+
+  function handleStreakStepXpBlur() {
+    const xp = Math.max(0, Number(streakStepXpInput) || 0);
+    setStreakBonusStepXp(xp);
+    setStreakStepXpInput(String(xp));
+  }
+
+  function handleStreakStepEternasBlur() {
+    const eternas = Math.max(0, Number(streakStepEternasInput) || 0);
+    setStreakBonusStepEternas(eternas);
+    setStreakStepEternasInput(String(eternas));
   }
 
   function resetWith(title: string, message: string, action: () => void, doneMessage: string) {
@@ -166,6 +187,38 @@ export default function Settings() {
               value={bonusEternasInput}
               onChange={(e) => setBonusEternasInput(e.target.value)}
               onBlur={handleBonusEternasBlur}
+              className="w-32 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary tabular-nums outline-none focus:border-accent-xp"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-border bg-surface p-5">
+        <h2 className="mb-3 text-lg font-semibold text-text-primary">Серии повторяющихся задач</h2>
+        <p className="mb-4 text-sm text-text-muted">
+          За каждое выполнение повторяющейся задачи подряд (без пропуска срока) бонус растёт: шаг × (длина серии − 1).
+        </p>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1 block text-sm text-text-muted">Шаг бонуса за серию, XP</label>
+            <input
+              type="number"
+              min={0}
+              value={streakStepXpInput}
+              onChange={(e) => setStreakStepXpInput(e.target.value)}
+              onBlur={handleStreakStepXpBlur}
+              className="w-32 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary tabular-nums outline-none focus:border-accent-xp"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm text-text-muted">Шаг бонуса за серию, этерны</label>
+            <input
+              type="number"
+              min={0}
+              value={streakStepEternasInput}
+              onChange={(e) => setStreakStepEternasInput(e.target.value)}
+              onBlur={handleStreakStepEternasBlur}
               className="w-32 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary tabular-nums outline-none focus:border-accent-xp"
             />
           </div>

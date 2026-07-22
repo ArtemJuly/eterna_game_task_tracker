@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { useCharacter } from '../../hooks/useCharacter';
 import { getLevelProgress } from '../../utils/levels';
+import SidebarPomodoro from './SidebarPomodoro';
 
 const navItems = [
   { to: '/', label: 'Главная' },
@@ -39,6 +40,8 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      <SidebarPomodoro />
 
       <div className="border-t border-border px-4 py-4">
         <div className="text-sm font-semibold text-text-primary">{level.name}</div>

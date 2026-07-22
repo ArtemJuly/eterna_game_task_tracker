@@ -4,6 +4,9 @@ import { generateId } from '../utils/ids';
 import { pushToast } from './useToast';
 import { triggerXpPulse } from './useXpPulse';
 
+const MAX_SPRINT_PROJECTS = 3;
+const MAX_ACTIVE_PROJECTS = 5;
+
 export interface NewProjectInput {
   title: string;
   goal: string;
@@ -19,6 +22,8 @@ function normalizeProject(p: Project): Project {
     xp: p.xp ?? 0,
     eternas: p.eternas ?? 0,
     completedAt: p.completedAt ?? null,
+    isSprint: p.isSprint ?? false,
+    isActive: p.isActive ?? true,
   };
 }
 
@@ -28,11 +33,19 @@ export function useProjects(): {
   updateProject: (id: string, patch: Partial<NewProjectInput>) => void;
   deleteProject: (id: string) => void;
   completeProject: (id: string) => void;
+  toggleSprint: (id: string) => void;
+  toggleActive: (id: string) => void;
 } {
   const [rawProjects, setProjects] = projectsStore.useStore();
   const projects = rawProjects.map(normalizeProject);
 
   function addProject(input: NewProjectInput) {
+    const activeCount = projects.filter((p) => p.isActive && p.status !== 'done').length;
+    const isActive = activeCount < MAX_ACTIVE_PROJECTS;
+    if (!isActive) {
+      pushToast('Уже 5 активных проектов — новый проект добавлен как неактивный', 'error');
+    }
+
     const project: Project = {
       id: generateId(),
       title: input.title,
@@ -43,6 +56,8 @@ export function useProjects(): {
       eternas: input.eternas,
       createdAt: new Date().toISOString(),
       completedAt: null,
+      isSprint: false,
+      isActive,
     };
     setProjects((prev) => [...prev, project]);
   }
@@ -84,5 +99,41 @@ export function useProjects(): {
     pushToast(`Проект завершён: +${project.xp} XP · +${project.eternas} ✦`, 'success');
   }
 
-  return { projects, addProject, updateProject, deleteProject, completeProject };
+  function toggleSprint(id: string) {
+    const project = projects.find((p) => p.id === id);
+    if (!project) return;
+
+    if (project.isSprint) {
+      setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, isSprint: false } : p)));
+      return;
+    }
+
+    const sprintCount = projects.filter((p) => p.isSprint).length;
+    if (sprintCount >= MAX_SPRINT_PROJECTS) {
+      pushToast('Уже выбрано 3 проекта-спринта — снимите отметку с одного, чтобы выбрать другой', 'error');
+      return;
+    }
+
+    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, isSprint: true } : p)));
+  }
+
+  function toggleActive(id: string) {
+    const project = projects.find((p) => p.id === id);
+    if (!project) return;
+
+    if (project.isActive) {
+      setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, isActive: false } : p)));
+      return;
+    }
+
+    const activeCount = projects.filter((p) => p.isActive && p.status !== 'done').length;
+    if (activeCount >= MAX_ACTIVE_PROJECTS) {
+      pushToast('Уже выбрано 5 активных проектов — переведите один в неактивные, чтобы выбрать другой', 'error');
+      return;
+    }
+
+    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, isActive: true } : p)));
+  }
+
+  return { projects, addProject, updateProject, deleteProject, completeProject, toggleSprint, toggleActive };
 }

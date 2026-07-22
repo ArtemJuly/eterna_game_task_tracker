@@ -1,22 +1,42 @@
-import { characterStore, historyStore, tasksStore } from './stores';
+import { characterStore, historyStore, projectsStore, settingsStore, tasksStore } from './stores';
 import type { Task, TaskStatus } from '../types';
 import { generateId } from '../utils/ids';
 import { pushToast } from './useToast';
 import { triggerXpPulse } from './useXpPulse';
-import { getTodayDateString } from '../utils/today';
+import { addDaysToDateString, getTodayDateString } from '../utils/today';
 import { playDing } from '../utils/sound';
 import { pausePomodoroIfRunningForTask } from './usePomodoros';
+import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier, isSprintTask } from '../utils/taskRewards';
+import { getStreakBonus, getStreakStars } from '../utils/recurrence';
 
 const MAX_FOCUS_TASKS_PER_DAY = 3;
-const FOCUS_XP_MULTIPLIER = 2;
 
 export interface NewTaskInput {
   title: string;
+  description: string;
   projectId: string | null;
   parentTaskId: string | null;
   xp: number;
   eternas: number;
   status: TaskStatus;
+  recurrenceIntervalDays: number | null;
+}
+
+function normalizeTask(t: Task): Task {
+  return {
+    ...t,
+    recurrenceIntervalDays: t.recurrenceIntervalDays ?? null,
+    nextDueDate: t.nextDueDate ?? null,
+    streakCount: t.streakCount ?? 0,
+  };
+}
+
+function getStreakBonusSteps(): { streakBonusStepXp: number; streakBonusStepEternas: number } {
+  const settings = settingsStore.getSnapshot();
+  return {
+    streakBonusStepXp: settings.streakBonusStepXp ?? 5,
+    streakBonusStepEternas: settings.streakBonusStepEternas ?? 5,
+  };
 }
 
 export function useTasks(): {
@@ -29,12 +49,15 @@ export function useTasks(): {
   deleteTask: (id: string) => void;
   toggleFocus: (id: string) => void;
 } {
-  const [tasks, setTasks] = tasksStore.useStore();
+  const [rawTasks, setTasks] = tasksStore.useStore();
+  const tasks = rawTasks.map(normalizeTask);
 
   function addTask(input: NewTaskInput) {
+    const today = getTodayDateString();
     const task: Task = {
       id: generateId(),
       title: input.title,
+      description: input.description,
       projectId: input.projectId,
       parentTaskId: input.parentTaskId,
       status: input.status,
@@ -43,12 +66,30 @@ export function useTasks(): {
       createdAt: new Date().toISOString(),
       completedAt: null,
       focusDate: null,
+      recurrenceIntervalDays: input.recurrenceIntervalDays,
+      nextDueDate: input.recurrenceIntervalDays !== null ? today : null,
+      streakCount: 0,
     };
     setTasks((prev) => [...prev, task]);
   }
 
   function updateTask(id: string, patch: Partial<NewTaskInput>) {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id !== id) return t;
+        const next = { ...t, ...patch };
+        if (patch.recurrenceIntervalDays !== undefined) {
+          if (patch.recurrenceIntervalDays === null) {
+            next.nextDueDate = null;
+            next.streakCount = 0;
+          } else if ((t.recurrenceIntervalDays ?? null) === null) {
+            next.nextDueDate = t.nextDueDate ?? getTodayDateString();
+            next.streakCount = t.streakCount ?? 0;
+          }
+        }
+        return next;
+      }),
+    );
   }
 
   function startTask(id: string) {
@@ -59,13 +100,39 @@ export function useTasks(): {
     const task = tasks.find((t) => t.id === id);
     if (!task || task.status === 'done') return;
 
-    const isFocusedToday = task.focusDate === getTodayDateString();
-    const multiplier = isFocusedToday ? FOCUS_XP_MULTIPLIER : 1;
-    const awardedXp = task.xp * multiplier;
-    const awardedEternas = task.eternas * multiplier;
+    const today = getTodayDateString();
+    const projects = projectsStore.getSnapshot();
+    const isFocusedToday = task.focusDate === today;
+    const isSprint = isSprintTask(task, projects);
+    const multiplier = getTaskRewardMultiplier(task, projects, today);
+    const baseXp = Math.round(task.xp * multiplier);
+    const baseEternas = Math.round(task.eternas * multiplier);
+
+    const isRecurring = task.recurrenceIntervalDays !== null;
+    const wasOnTime = !task.nextDueDate || today <= task.nextDueDate;
+    const newStreak = isRecurring ? (wasOnTime ? task.streakCount + 1 : 1) : 0;
+    const { streakBonusStepXp, streakBonusStepEternas } = getStreakBonusSteps();
+    const streakBonus = isRecurring ? getStreakBonus(newStreak, streakBonusStepXp, streakBonusStepEternas) : { xp: 0, eternas: 0 };
+
+    const awardedXp = baseXp + streakBonus.xp;
+    const awardedEternas = baseEternas + streakBonus.eternas;
 
     const completedAt = new Date().toISOString();
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'done', completedAt } : t)));
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id !== id) return t;
+        if (isRecurring) {
+          return {
+            ...t,
+            status: 'planned',
+            focusDate: null,
+            streakCount: newStreak,
+            nextDueDate: addDaysToDateString(today, task.recurrenceIntervalDays as number),
+          };
+        }
+        return { ...t, status: 'done', completedAt };
+      }),
+    );
     pausePomodoroIfRunningForTask(id);
 
     characterStore.set((prev) => ({
@@ -73,11 +140,17 @@ export function useTasks(): {
       eternas: prev.eternas + awardedEternas,
     }));
 
+    const labelSuffixes: string[] = [];
+    if (isFocusedToday) labelSuffixes.push('×2 за топ дня');
+    if (isSprint) labelSuffixes.push('×1.2 спринт');
+    if (streakBonus.xp > 0 || streakBonus.eternas > 0) labelSuffixes.push(`🔥 серия ×${newStreak}`);
+    const label = labelSuffixes.length > 0 ? `${task.title} (${labelSuffixes.join(', ')})` : task.title;
+
     historyStore.set((prev) => [
       {
         id: generateId(),
         type: 'task_done',
-        label: isFocusedToday ? `${task.title} (×${FOCUS_XP_MULTIPLIER} за топ дня)` : task.title,
+        label,
         xpDelta: awardedXp,
         eternasDelta: awardedEternas,
         createdAt: completedAt,
@@ -87,17 +160,32 @@ export function useTasks(): {
 
     triggerXpPulse();
     playDing();
-    pushToast(
-      isFocusedToday
-        ? `⭐ ×${FOCUS_XP_MULTIPLIER} +${awardedXp} XP · +${awardedEternas} ✦`
-        : `+${awardedXp} XP · +${awardedEternas} ✦`,
-    );
+    const icon = getMultiplierIcon(task, projects, today);
+    const baseMessage =
+      multiplier !== 1
+        ? `${icon} ×${formatMultiplier(multiplier)} +${baseXp} XP · +${baseEternas} ✦`
+        : `+${baseXp} XP · +${baseEternas} ✦`;
+    const bonusMessage =
+      streakBonus.xp > 0 || streakBonus.eternas > 0
+        ? ` · 🔥 серия ×${newStreak} +${streakBonus.xp} XP · +${streakBonus.eternas} ✦`
+        : '';
+    pushToast(baseMessage + bonusMessage);
+
+    if (isRecurring) {
+      const starsBefore = getStreakStars(task.streakCount);
+      const starsAfter = getStreakStars(newStreak);
+      if (starsAfter > starsBefore) {
+        pushToast(`🌟 Новая веха: серия «${task.title}» ×${newStreak}!`, 'success');
+      }
+    }
   }
 
   function deleteTask(id: string) {
     pausePomodoroIfRunningForTask(id);
+    const task = tasks.find((t) => t.id === id);
+    const newParentId = task?.parentTaskId ?? null;
     setTasks((prev) =>
-      prev.filter((t) => t.id !== id).map((t) => (t.parentTaskId === id ? { ...t, parentTaskId: null } : t)),
+      prev.filter((t) => t.id !== id).map((t) => (t.parentTaskId === id ? { ...t, parentTaskId: newParentId } : t)),
     );
   }
 
