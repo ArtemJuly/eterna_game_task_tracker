@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCharacter } from '../hooks/useCharacter';
 import { useTasks } from '../hooks/useTasks';
 import { useProjects } from '../hooks/useProjects';
@@ -18,6 +18,7 @@ import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier } from '..
 import { formatRecurrence, getStreakStars, isTaskOverdue } from '../utils/recurrence';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const character = useCharacter();
   const { tasks, completeTask, toggleFocus } = useTasks();
   const today = getTodayDateString();
@@ -160,13 +161,12 @@ export default function Dashboard() {
               <Link
                 key={project.id}
                 to={`/projects/${project.id}`}
-                className={`rounded-lg border border-border bg-surface p-4 hover:bg-white/[0.04] transition-colors ${
-                  !project.isActive ? 'opacity-60' : ''
+                className={`rounded-lg border p-4 transition-colors hover:bg-overlay/[0.04] ${
+                  project.isActive ? 'border-accent-eternas/50 bg-accent-eternas/[0.04]' : 'border-border bg-surface'
                 }`}
               >
                 <div className="flex items-center gap-1.5">
                   {project.isSprint && <span>🚀</span>}
-                  {!project.isActive && <span>💤</span>}
                   <div className="font-medium text-text-primary">{project.title}</div>
                 </div>
                 <div className="mt-1 text-sm text-text-muted tabular-nums">
@@ -195,13 +195,16 @@ export default function Dashboard() {
               return (
                 <div
                   key={task.id}
-                  className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${
+                  onClick={() => navigate(`/tasks/${task.id}`)}
+                  className={`group flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-overlay/[0.03] ${
                     isFocused ? 'border-accent-xp/50 bg-accent-xp/[0.04]' : 'border-border bg-surface'
                   }`}
                 >
-                  <TodayFocusButton active={isFocused} onClick={() => toggleFocus(task.id)} />
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <TodayFocusButton active={isFocused} onClick={() => toggleFocus(task.id)} />
+                  </div>
                   <div className="flex-1">
-                    <div className="font-medium text-text-primary">{task.title}</div>
+                    <div className="font-medium text-text-primary group-hover:underline">{task.title}</div>
                     <div className="mt-1 flex items-center gap-2 text-sm text-text-muted">
                       {project && <span>{project.title}</span>}
                       {parentTask && <Badge tone="muted">↳ {parentTask.title}</Badge>}
@@ -225,9 +228,11 @@ export default function Dashboard() {
                       )}
                     </div>
                   </div>
-                  <Button variant="primary" onClick={() => completeTask(task.id)}>
-                    Выполнить
-                  </Button>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Button variant="primary" onClick={() => completeTask(task.id)}>
+                      Выполнить
+                    </Button>
+                  </div>
                 </div>
               );
             })}

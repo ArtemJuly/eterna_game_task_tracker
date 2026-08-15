@@ -11,7 +11,7 @@ export default function ActiveStatusToggle({ active, onClick }: ActiveStatusTogg
       className={`inline-flex items-center rounded-[4px] border px-2 py-0.5 text-xs font-medium transition-colors ${
         active
           ? 'border-success/30 bg-success/10 text-success hover:bg-success/20'
-          : 'border-border bg-white/5 text-text-muted hover:bg-white/10'
+          : 'border-border bg-overlay/5 text-text-muted hover:bg-overlay/10'
       }`}
     >
       {active ? '⚡ Активен' : '💤 Неактивен'}

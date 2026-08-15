@@ -8,6 +8,8 @@ import ProjectDetail from './pages/ProjectDetail';
 import Rewards from './pages/Rewards';
 import History from './pages/History';
 import Settings from './pages/Settings';
+import Tracks from './pages/Tracks';
+import TrackDetail from './pages/TrackDetail';
 
 export default function App() {
   return (
@@ -20,6 +22,8 @@ export default function App() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/rewards" element={<Rewards />} />
+          <Route path="/tracks" element={<Tracks />} />
+          <Route path="/tracks/:id" element={<TrackDetail />} />
           <Route path="/history" element={<History />} />
           <Route path="/settings" element={<Settings />} />
         </Route>

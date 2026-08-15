@@ -10,7 +10,7 @@ import SprintToggleButton from '../components/SprintToggleButton';
 import ActiveStatusToggle from '../components/ActiveStatusToggle';
 
 export default function Projects() {
-  const { projects, addProject, toggleSprint, toggleActive } = useProjects();
+  const { projects, addProject, toggleSprint, toggleActive, moveProjectPriority } = useProjects();
   const { tasks } = useTasks();
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -28,8 +28,8 @@ export default function Projects() {
           Проектов пока нет
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
-          {projects.map((project) => {
+        <div className="flex flex-col gap-3">
+          {projects.map((project, index) => {
             const projectTasks = tasks.filter((t) => t.projectId === project.id && t.status !== 'cancelled');
             const done = projectTasks.filter((t) => t.status === 'done').length;
             const total = projectTasks.length;
@@ -41,49 +41,79 @@ export default function Projects() {
               <Link
                 key={project.id}
                 to={`/projects/${project.id}`}
-                className={`flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 hover:bg-white/[0.04] transition-colors ${
-                  !project.isActive ? 'opacity-60' : ''
+                className={`flex gap-4 rounded-lg border p-4 transition-colors hover:bg-overlay/[0.04] ${
+                  project.isActive
+                    ? 'border-accent-eternas/50 bg-accent-eternas/[0.04]'
+                    : 'border-border bg-surface'
                 }`}
               >
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-                      <SprintToggleButton active={project.isSprint} onClick={() => toggleSprint(project.id)} />
-                    </div>
-                    <div
-                      className={`font-semibold ${
-                        project.status === 'done' ? 'text-text-muted line-through' : 'text-text-primary'
-                      }`}
+                <div
+                  className="flex flex-col items-center gap-1 pt-0.5"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                >
+                  <span className="text-lg font-bold text-text-muted tabular-nums">#{index + 1}</span>
+                  <div className="flex flex-col">
+                    <Button
+                      variant="ghost"
+                      disabled={index === 0}
+                      onClick={() => moveProjectPriority(project.id, 'up')}
                     >
-                      {project.title}
-                    </div>
-                    <Badge tone={project.status === 'done' ? 'success' : 'muted'}>
-                      {project.status === 'done' ? 'Завершён' : 'В процессе'}
-                    </Badge>
-                    {project.status !== 'done' && (
+                      ▲
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      disabled={index === projects.length - 1}
+                      onClick={() => moveProjectPriority(project.id, 'down')}
+                    >
+                      ▼
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex flex-1 flex-col gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
                       <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-                        <ActiveStatusToggle active={project.isActive} onClick={() => toggleActive(project.id)} />
+                        <SprintToggleButton active={project.isSprint} onClick={() => toggleSprint(project.id)} />
+                      </div>
+                      <div
+                        className={`font-semibold ${
+                          project.status === 'done' ? 'text-text-muted line-through' : 'text-text-primary'
+                        }`}
+                      >
+                        {project.title}
+                      </div>
+                      <Badge tone={project.status === 'done' ? 'success' : 'muted'}>
+                        {project.status === 'done' ? 'Завершён' : 'В процессе'}
+                      </Badge>
+                      {project.status !== 'done' && (
+                        <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                          <ActiveStatusToggle active={project.isActive} onClick={() => toggleActive(project.id)} />
+                        </div>
+                      )}
+                    </div>
+                    {project.goal && <div className="mt-1 text-sm text-text-muted">{project.goal}</div>}
+                    {project.deadline && (
+                      <div className="mt-1 text-xs text-text-muted">
+                        До {new Date(project.deadline).toLocaleDateString('ru-RU')}
                       </div>
                     )}
                   </div>
-                  {project.goal && <div className="mt-1 text-sm text-text-muted">{project.goal}</div>}
-                  {project.deadline && (
-                    <div className="mt-1 text-xs text-text-muted">
-                      До {new Date(project.deadline).toLocaleDateString('ru-RU')}
+
+                  <div>
+                    <div className="mb-1 text-sm text-text-muted tabular-nums">
+                      {done} / {total} задач
                     </div>
-                  )}
-                </div>
-
-                <div>
-                  <div className="mb-1 text-sm text-text-muted tabular-nums">
-                    {done} / {total} задач
+                    <ProgressBar percent={percent} />
                   </div>
-                  <ProgressBar percent={percent} />
-                </div>
 
-                <div className="flex flex-col gap-0.5 text-sm text-text-muted tabular-nums">
-                  <span>{totalXp} XP · {totalEternas} ✦ от задач</span>
-                  <span>Награда за проект: {project.xp} XP · {project.eternas} ✦</span>
+                  <div className="flex flex-col gap-0.5 text-sm text-text-muted tabular-nums">
+                    <span>{totalXp} XP · {totalEternas} ✦ от задач</span>
+                    <span>Награда за проект: {project.xp} XP · {project.eternas} ✦</span>
+                  </div>
                 </div>
               </Link>
             );

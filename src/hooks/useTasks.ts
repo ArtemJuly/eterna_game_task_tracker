@@ -1,5 +1,5 @@
 import { characterStore, historyStore, projectsStore, settingsStore, tasksStore } from './stores';
-import type { Task, TaskStatus } from '../types';
+import type { Task, TaskStatus, TrackLink } from '../types';
 import { generateId } from '../utils/ids';
 import { pushToast } from './useToast';
 import { triggerXpPulse } from './useXpPulse';
@@ -8,6 +8,7 @@ import { playDing } from '../utils/sound';
 import { pausePomodoroIfRunningForTask } from './usePomodoros';
 import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier, isSprintTask } from '../utils/taskRewards';
 import { getStreakBonus, getStreakStars } from '../utils/recurrence';
+import { applyTrackXp } from './useTracks';
 
 const MAX_FOCUS_TASKS_PER_DAY = 3;
 
@@ -20,6 +21,7 @@ export interface NewTaskInput {
   eternas: number;
   status: TaskStatus;
   recurrenceIntervalDays: number | null;
+  trackLinks: TrackLink[];
 }
 
 function normalizeTask(t: Task): Task {
@@ -28,6 +30,7 @@ function normalizeTask(t: Task): Task {
     recurrenceIntervalDays: t.recurrenceIntervalDays ?? null,
     nextDueDate: t.nextDueDate ?? null,
     streakCount: t.streakCount ?? 0,
+    trackLinks: t.trackLinks ?? [],
   };
 }
 
@@ -69,6 +72,7 @@ export function useTasks(): {
       recurrenceIntervalDays: input.recurrenceIntervalDays,
       nextDueDate: input.recurrenceIntervalDays !== null ? today : null,
       streakCount: 0,
+      trackLinks: input.trackLinks,
     };
     setTasks((prev) => [...prev, task]);
   }
@@ -139,6 +143,7 @@ export function useTasks(): {
       totalXp: prev.totalXp + awardedXp,
       eternas: prev.eternas + awardedEternas,
     }));
+    applyTrackXp(task.trackLinks, awardedXp);
 
     const labelSuffixes: string[] = [];
     if (isFocusedToday) labelSuffixes.push('×2 за топ дня');

@@ -33,7 +33,7 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
           <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded text-text-muted hover:bg-white/[0.04] hover:text-text-primary px-2 py-1"
+            className="rounded text-text-muted hover:bg-overlay/[0.04] hover:text-text-primary px-2 py-1"
           >
             ✕
           </button>

@@ -290,7 +290,7 @@ export default function TaskDetail() {
               <div
                 key={child.id}
                 onClick={() => navigate(`/tasks/${child.id}`)}
-                className={`group flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-white/[0.03] ${
+                className={`group flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-overlay/[0.03] ${
                   child.status === 'cancelled' ? 'opacity-60' : ''
                 } ${childFocused ? 'border-accent-xp/50 bg-accent-xp/[0.04]' : 'border-border bg-surface'}`}
               >

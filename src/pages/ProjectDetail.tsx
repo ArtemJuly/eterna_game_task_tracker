@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useProjects } from '../hooks/useProjects';
 import { useTasks } from '../hooks/useTasks';
 import type { NewTaskInput } from '../hooks/useTasks';
+import { usePomodoros } from '../hooks/usePomodoros';
 import { useConfirm } from '../hooks/useConfirm';
 import type { Project, Task, TaskStatus } from '../types';
 import { getDirectChildren } from '../utils/taskTree';
@@ -18,6 +19,7 @@ import ActiveStatusToggle from '../components/ActiveStatusToggle';
 import { getTodayDateString } from '../utils/today';
 import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier } from '../utils/taskRewards';
 import { formatRecurrence, getStreakStars, isTaskOverdue } from '../utils/recurrence';
+import { getProjectPomodoroStats } from '../utils/pomodoroStats';
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
   planned: 'Запланирована',
@@ -38,6 +40,7 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const { projects, updateProject, deleteProject, completeProject, toggleSprint, toggleActive } = useProjects();
   const { tasks, addTask, updateTask, startTask, completeTask, cancelTask, deleteTask, toggleFocus } = useTasks();
+  const { sessions } = usePomodoros();
   const { confirm, dialog } = useConfirm();
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
@@ -66,9 +69,10 @@ export default function ProjectDetail() {
   const done = active.filter((t) => t.status === 'done').length;
   const total = active.length;
   const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+  const pomodoroStats = getProjectPomodoroStats(sessions, tasks, project.id);
 
   const topLevelTasks = projectTasks
-    .filter((t) => t.parentTaskId === null)
+    .filter((t) => t.parentTaskId === null && t.status !== 'cancelled')
     .sort((a, b) => {
       const aFocused = a.focusDate === today ? 1 : 0;
       const bFocused = b.focusDate === today ? 1 : 0;
@@ -137,7 +141,11 @@ export default function ProjectDetail() {
         ← Все проекты
       </Link>
 
-      <div className={`rounded-lg border border-border bg-surface p-5 ${!project.isActive ? 'opacity-60' : ''}`}>
+      <div
+        className={`rounded-lg border p-5 ${
+          project.isActive ? 'border-accent-eternas/50 bg-accent-eternas/[0.04]' : 'border-border bg-surface'
+        }`}
+      >
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
             <SprintToggleButton active={project.isSprint} onClick={() => toggleSprint(project.id)} />
@@ -189,6 +197,15 @@ export default function ProjectDetail() {
           </div>
           <ProgressBar percent={percent} />
         </div>
+
+        <div className="mt-4 flex items-center gap-3">
+          {pomodoroStats.count > 0 && (
+            <span className="text-sm text-text-muted tabular-nums">
+              🍅 × {pomodoroStats.count} · {pomodoroStats.totalMinutes} мин по проекту
+            </span>
+          )}
+          <PomodoroTimer projectId={project.id} active={project.status !== 'done'} showStats={false} />
+        </div>
       </div>
 
       <div className="flex items-center justify-between">
@@ -216,7 +233,7 @@ export default function ProjectDetail() {
               <div
                 key={task.id}
                 onClick={() => navigate(`/tasks/${task.id}`)}
-                className={`group flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-white/[0.03] ${
+                className={`group flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-overlay/[0.03] ${
                   task.status === 'cancelled' ? 'opacity-60' : ''
                 } ${isFocused ? 'border-accent-xp/50 bg-accent-xp/[0.04]' : 'border-border bg-surface'}`}
               >

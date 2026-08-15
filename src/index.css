@@ -11,6 +11,35 @@
   --accent-eternas: #f0a050;
   --success: #34d399;
   --danger: #f87171;
+  --overlay: #ffffff;
+}
+
+/* Чёрно-золотая тема: монохромный чёрный с золотыми акцентами */
+:root[data-theme='black-gold'] {
+  --bg: #0a0a0a;
+  --surface: #161514;
+  --border: #2e2a22;
+  --text-primary: #f2ead9;
+  --text-muted: #8f8672;
+  --accent-xp: #a67c1e;
+  --accent-eternas: #e8c468;
+  --success: #4ade80;
+  --danger: #f87171;
+  --overlay: #ffffff;
+}
+
+/* Бело-золотая тема: светлый фон с золотыми акцентами */
+:root[data-theme='white-gold'] {
+  --bg: #faf7ef;
+  --surface: #ffffff;
+  --border: #e8dfc8;
+  --text-primary: #2b2517;
+  --text-muted: #8f8470;
+  --accent-xp: #8a6a16;
+  --accent-eternas: #b8860b;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --overlay: #000000;
 }
 
 @theme {
@@ -23,7 +52,34 @@
   --color-accent-eternas: #f0a050;
   --color-success: #34d399;
   --color-danger: #f87171;
+  --color-overlay: #ffffff;
   --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+:root[data-theme='black-gold'] {
+  --color-bg: #0a0a0a;
+  --color-surface: #161514;
+  --color-border: #2e2a22;
+  --color-text-primary: #f2ead9;
+  --color-text-muted: #8f8672;
+  --color-accent-xp: #a67c1e;
+  --color-accent-eternas: #e8c468;
+  --color-success: #4ade80;
+  --color-danger: #f87171;
+  --color-overlay: #ffffff;
+}
+
+:root[data-theme='white-gold'] {
+  --color-bg: #faf7ef;
+  --color-surface: #ffffff;
+  --color-border: #e8dfc8;
+  --color-text-primary: #2b2517;
+  --color-text-muted: #8f8470;
+  --color-accent-xp: #8a6a16;
+  --color-accent-eternas: #b8860b;
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
+  --color-overlay: #000000;
 }
 
 * {

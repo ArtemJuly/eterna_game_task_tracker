@@ -1,10 +1,20 @@
 import { useEffect, useState } from 'react';
-import type { Task, TaskStatus } from '../types';
+import type { Task, TaskStatus, TrackLink } from '../types';
 import type { NewTaskInput } from '../hooks/useTasks';
 import { useProjects } from '../hooks/useProjects';
 import { useTasks } from '../hooks/useTasks';
+import { useTracks } from '../hooks/useTracks';
+import { useSettings } from '../hooks/useSettings';
+import { pushToast } from '../hooks/useToast';
 import { isDescendantOf } from '../utils/taskTree';
 import { RECURRENCE_PRESETS } from '../utils/recurrence';
+import {
+  AiEstimateError,
+  estimateTaskReward,
+  pickFewShotExamples,
+  titleMatches,
+  type TaskEstimate,
+} from '../utils/aiTaskEstimate';
 import Modal from './ui/Modal';
 import Button from './ui/Button';
 
@@ -36,6 +46,8 @@ export default function TaskModal({
 }: TaskModalProps) {
   const { projects } = useProjects();
   const { tasks } = useTasks();
+  const { tracks } = useTracks();
+  const { settings } = useSettings();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [projectId, setProjectId] = useState<string>('');
@@ -45,6 +57,11 @@ export default function TaskModal({
   const [status, setStatus] = useState<TaskStatus>('planned');
   const [recurrenceMode, setRecurrenceMode] = useState('none');
   const [customDays, setCustomDays] = useState(3);
+  const [trackLinks, setTrackLinks] = useState<TrackLink[]>([]);
+  const [pickerTrackId, setPickerTrackId] = useState('');
+  const [pickerStageId, setPickerStageId] = useState('');
+  const [estimating, setEstimating] = useState(false);
+  const [lastEstimate, setLastEstimate] = useState<({ key: string } & TaskEstimate) | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -58,7 +75,25 @@ export default function TaskModal({
     const intervalDays = initialTask?.recurrenceIntervalDays ?? null;
     setRecurrenceMode(modeForInterval(intervalDays));
     if (intervalDays !== null && !PRESET_DAYS.includes(intervalDays)) setCustomDays(intervalDays);
+    setTrackLinks(initialTask?.trackLinks ?? []);
+    setPickerTrackId('');
+    setPickerStageId('');
+    setLastEstimate(null);
   }, [open, initialTask, defaultProjectId, defaultParentTaskId]);
+
+  const availableTracks = tracks.filter((t) => !trackLinks.some((l) => l.trackId === t.id));
+  const pickerStages = tracks.find((t) => t.id === pickerTrackId)?.stages ?? [];
+
+  function addTrackLink() {
+    if (!pickerTrackId || !pickerStageId) return;
+    setTrackLinks((prev) => [...prev, { trackId: pickerTrackId, stageId: pickerStageId }]);
+    setPickerTrackId('');
+    setPickerStageId('');
+  }
+
+  function removeTrackLink(trackId: string) {
+    setTrackLinks((prev) => prev.filter((l) => l.trackId !== trackId));
+  }
 
   const parentOptions = tasks.filter((t) => {
     if (!initialTask) return true;
@@ -66,6 +101,74 @@ export default function TaskModal({
     if (isDescendantOf(tasks, t.id, initialTask.id)) return false;
     return true;
   });
+
+  function applyEstimateResult(result: TaskEstimate): string {
+    setXp(result.xp);
+    setEternas(result.eternas);
+
+    let matchedProjectTitle: string | null = null;
+    if (result.projectTitle) {
+      const matched = projects.find((p) => titleMatches(p.title, result.projectTitle!));
+      if (matched) {
+        setProjectId(matched.id);
+        matchedProjectTitle = matched.title;
+      }
+    }
+
+    let matchedTrackLabel: string | null = null;
+    if (result.trackTitle) {
+      const matchedTrack = tracks.find((t) => titleMatches(t.title, result.trackTitle!));
+      const matchedStage = matchedTrack?.stages[matchedTrack.currentStageIndex] ?? null;
+      if (matchedTrack && matchedStage) {
+        setTrackLinks((prev) => [
+          ...prev.filter((l) => l.trackId !== matchedTrack.id),
+          { trackId: matchedTrack.id, stageId: matchedStage.id },
+        ]);
+        matchedTrackLabel = `${matchedTrack.title} → ${matchedStage.title}`;
+      }
+    }
+
+    const parts = [`${result.xp} XP · ${result.eternas} ✦`];
+    if (matchedProjectTitle) parts.push(`проект «${matchedProjectTitle}»`);
+    if (matchedTrackLabel) parts.push(`трек «${matchedTrackLabel}»`);
+    return `AI: ${parts.join(' · ')}`;
+  }
+
+  async function handleAiEstimate() {
+    if (!settings.aiApiKey) {
+      pushToast('Добавьте API-ключ в Настройках', 'error');
+      return;
+    }
+    const key = `${title.trim()} ${description.trim()}`;
+    if (lastEstimate && lastEstimate.key === key) {
+      pushToast(applyEstimateResult(lastEstimate));
+      return;
+    }
+    setEstimating(true);
+    try {
+      const examples = pickFewShotExamples(tasks, projectId || null);
+      const projectTitles = projects.filter((p) => p.status === 'active').map((p) => p.title);
+      const trackCandidates = tracks
+        .filter((t) => t.stages.length > 0)
+        .map((t) => ({ title: t.title, goal: t.goal, currentStageTitle: t.stages[t.currentStageIndex]?.title ?? null }));
+      const result = await estimateTaskReward({
+        title: title.trim(),
+        description: description.trim(),
+        examples,
+        projectTitles,
+        trackCandidates,
+        apiKey: settings.aiApiKey,
+      });
+      setLastEstimate({ key, ...result });
+      pushToast(applyEstimateResult(result));
+    } catch (err) {
+      if (!(err instanceof AiEstimateError)) console.error('AI estimate failed:', err);
+      const message = err instanceof AiEstimateError ? err.message : 'Не удалось получить оценку AI';
+      pushToast(message, 'error');
+    } finally {
+      setEstimating(false);
+    }
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -81,6 +184,7 @@ export default function TaskModal({
       eternas,
       status,
       recurrenceIntervalDays,
+      trackLinks,
     });
     onClose();
   }
@@ -171,6 +275,77 @@ export default function TaskModal({
               className="mt-2 w-32 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary tabular-nums outline-none focus:border-accent-xp"
             />
           )}
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm text-text-muted">Треки развития</label>
+          {trackLinks.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {trackLinks.map((link) => {
+                const linkTrack = tracks.find((t) => t.id === link.trackId);
+                const linkStage = linkTrack?.stages.find((s) => s.id === link.stageId);
+                return (
+                  <span
+                    key={link.trackId}
+                    className="inline-flex items-center gap-1.5 rounded-[4px] border border-border bg-overlay/5 px-2 py-1 text-xs text-text-primary"
+                  >
+                    {linkTrack?.title ?? '—'} → {linkStage?.title ?? '—'}
+                    <button
+                      type="button"
+                      onClick={() => removeTrackLink(link.trackId)}
+                      className="text-text-muted hover:text-danger"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <select
+              value={pickerTrackId}
+              onChange={(e) => {
+                setPickerTrackId(e.target.value);
+                setPickerStageId('');
+              }}
+              className="flex-1 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+            >
+              <option value="">Выбрать трек</option>
+              {availableTracks.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
+                </option>
+              ))}
+            </select>
+            <select
+              value={pickerStageId}
+              onChange={(e) => setPickerStageId(e.target.value)}
+              disabled={!pickerTrackId}
+              className="flex-1 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp disabled:opacity-50"
+            >
+              <option value="">Этап</option>
+              {pickerStages.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.title}
+                </option>
+              ))}
+            </select>
+            <Button type="button" variant="secondary" disabled={!pickerTrackId || !pickerStageId} onClick={addTrackLink}>
+              + Добавить
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!title.trim() || estimating}
+            onClick={handleAiEstimate}
+          >
+            {estimating ? 'Оцениваю...' : '🤖 Оценить AI'}
+          </Button>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

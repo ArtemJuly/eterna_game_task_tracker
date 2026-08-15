@@ -12,6 +12,13 @@ import {
 } from '../hooks/stores';
 import { pushToast } from '../hooks/useToast';
 import Button from '../components/ui/Button';
+import type { ThemeName } from '../types';
+
+const THEME_OPTIONS: { value: ThemeName; label: string; bg: string; surface: string; accent: string }[] = [
+  { value: 'dark', label: 'Тёмная (по умолчанию)', bg: '#0f1117', surface: '#181c25', accent: '#7c6ff7' },
+  { value: 'black-gold', label: 'Чёрно-золотая', bg: '#0a0a0a', surface: '#161514', accent: '#e8c468' },
+  { value: 'white-gold', label: 'Бело-золотая', bg: '#faf7ef', surface: '#ffffff', accent: '#b8860b' },
+];
 
 export default function Settings() {
   const {
@@ -21,6 +28,8 @@ export default function Settings() {
     setPomodoroBonusEternas,
     setStreakBonusStepXp,
     setStreakBonusStepEternas,
+    setTheme,
+    setAiApiKey,
   } = useSettings();
   const { confirm, dialog } = useConfirm();
   const [durationInput, setDurationInput] = useState(String(settings.pomodoroDurationMinutes));
@@ -28,6 +37,7 @@ export default function Settings() {
   const [bonusEternasInput, setBonusEternasInput] = useState(String(settings.pomodoroBonusEternas));
   const [streakStepXpInput, setStreakStepXpInput] = useState(String(settings.streakBonusStepXp));
   const [streakStepEternasInput, setStreakStepEternasInput] = useState(String(settings.streakBonusStepEternas));
+  const [aiApiKeyInput, setAiApiKeyInput] = useState(settings.aiApiKey);
 
   function handleDurationBlur() {
     const minutes = Math.max(1, Math.min(180, Number(durationInput) || settings.pomodoroDurationMinutes));
@@ -57,6 +67,10 @@ export default function Settings() {
     const eternas = Math.max(0, Number(streakStepEternasInput) || 0);
     setStreakBonusStepEternas(eternas);
     setStreakStepEternasInput(String(eternas));
+  }
+
+  function handleAiApiKeyBlur() {
+    setAiApiKey(aiApiKeyInput.trim());
   }
 
   function resetWith(title: string, message: string, action: () => void, doneMessage: string) {
@@ -154,6 +168,30 @@ export default function Settings() {
       <h1 className="text-2xl font-bold text-text-primary">Настройки</h1>
 
       <section className="rounded-lg border border-border bg-surface p-5">
+        <h2 className="mb-3 text-lg font-semibold text-text-primary">Оформление</h2>
+        <div className="grid grid-cols-3 gap-3">
+          {THEME_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setTheme(opt.value)}
+              className={`flex flex-col gap-2 rounded-lg border p-3 text-left transition-colors ${
+                settings.theme === opt.value
+                  ? 'border-accent-xp'
+                  : 'border-border hover:border-text-muted'
+              }`}
+            >
+              <div className="flex h-10 overflow-hidden rounded border border-border">
+                <div className="flex-1" style={{ background: opt.bg }} />
+                <div className="w-3" style={{ background: opt.accent }} />
+              </div>
+              <span className="text-sm text-text-primary">{opt.label}</span>
+              <span className="text-xs text-accent-xp">{settings.theme === opt.value ? '✓ Выбрана' : ''}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-border bg-surface p-5">
         <h2 className="mb-3 text-lg font-semibold text-text-primary">Помидоро-таймер</h2>
 
         <label className="mb-1 block text-sm text-text-muted">Длительность одного помидора, минут</label>
@@ -223,6 +261,24 @@ export default function Settings() {
             />
           </div>
         </div>
+      </section>
+
+      <section className="rounded-lg border border-border bg-surface p-5">
+        <h2 className="mb-3 text-lg font-semibold text-text-primary">AI-оценка задач</h2>
+        <p className="mb-4 text-sm text-text-muted">
+          Ключ для кнопки «Оценить AI» в карточке задачи (модель claude-haiku-4-5 через proxyapi.ru). Хранится
+          только локально в этом браузере и никуда, кроме proxyapi.ru, не отправляется.
+        </p>
+        <label className="mb-1 block text-sm text-text-muted">API-ключ</label>
+        <input
+          type="password"
+          autoComplete="off"
+          placeholder="sk-..."
+          value={aiApiKeyInput}
+          onChange={(e) => setAiApiKeyInput(e.target.value)}
+          onBlur={handleAiApiKeyBlur}
+          className="w-full max-w-md rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+        />
       </section>
 
       <section className="rounded-lg border border-danger/30 bg-surface p-5">

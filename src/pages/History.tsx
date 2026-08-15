@@ -72,7 +72,7 @@ export default function History() {
       {visibleCount < sorted.length && (
         <button
           onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-          className="self-center rounded border border-border px-4 py-2 text-sm text-text-muted hover:bg-white/[0.04] hover:text-text-primary"
+          className="self-center rounded border border-border px-4 py-2 text-sm text-text-muted hover:bg-overlay/[0.04] hover:text-text-primary"
         >
           Показать ещё
         </button>

@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react';
 import Modal from './Modal';
 import Button from './Button';
 
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
-  message: string;
+  message: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   danger?: boolean;
@@ -24,7 +25,7 @@ export default function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Modal open={open} onClose={onClose} title={title}>
-      <p className="text-sm text-text-muted">{message}</p>
+      <div className="text-sm text-text-muted">{message}</div>
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>
           {cancelLabel}

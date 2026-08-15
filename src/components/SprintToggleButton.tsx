@@ -11,7 +11,7 @@ export default function SprintToggleButton({ active, onClick }: SprintToggleButt
       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded border text-base transition-colors ${
         active
           ? 'border-accent-eternas bg-accent-eternas/15 text-accent-eternas'
-          : 'border-border text-text-muted hover:bg-white/[0.04] hover:text-text-primary'
+          : 'border-border text-text-muted hover:bg-overlay/[0.04] hover:text-text-primary'
       }`}
     >
       🚀

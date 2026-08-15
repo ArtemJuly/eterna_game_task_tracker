@@ -1,4 +1,4 @@
-import type { Character, HistoryEntry, Project, Reward, Task } from '../types';
+import type { Character, HistoryEntry, Project, Reward, Task, Track } from '../types';
 import { generateId } from './ids';
 import { STORAGE_KEYS, writeStorage } from './storage';
 
@@ -27,6 +27,7 @@ export function seedIfEmpty(): void {
       completedAt: null,
       isSprint: true,
       isActive: true,
+      priority: 0,
     },
     {
       id: projIdThesis,
@@ -40,6 +41,7 @@ export function seedIfEmpty(): void {
       completedAt: null,
       isSprint: false,
       isActive: true,
+      priority: 1,
     },
     {
       id: projIdHealth,
@@ -53,10 +55,41 @@ export function seedIfEmpty(): void {
       completedAt: null,
       isSprint: false,
       isActive: false,
+      priority: 2,
     },
   ];
 
   const todayStr = new Date(now).toISOString().slice(0, 10);
+
+  const mathStageId = generateId();
+  const quantTrackId = generateId();
+
+  const tracks: Track[] = [
+    {
+      id: quantTrackId,
+      title: 'Квант',
+      goal: 'Стать квантовым аналитиком',
+      createdAt: iso(30),
+      currentStageIndex: 0,
+      status: 'active',
+      completedAt: null,
+      stages: [
+        { id: mathStageId, title: 'Математик', description: '', xp: 130, level: 2, projectId: null },
+        { id: generateId(), title: 'Программирование', description: '', xp: 0, level: 1, projectId: null },
+        { id: generateId(), title: 'Финансы', description: '', xp: 0, level: 1, projectId: null },
+      ],
+    },
+    {
+      id: generateId(),
+      title: 'Английский язык',
+      goal: '',
+      createdAt: iso(25),
+      currentStageIndex: 0,
+      status: 'active',
+      completedAt: null,
+      stages: [{ id: generateId(), title: 'Разговорный', description: '', xp: 40, level: 1, projectId: null }],
+    },
+  ];
 
   const doneTask: Task = {
     id: generateId(),
@@ -73,6 +106,7 @@ export function seedIfEmpty(): void {
     recurrenceIntervalDays: null,
     nextDueDate: null,
     streakCount: 0,
+    trackLinks: [],
   };
 
   const conceptTaskId = generateId();
@@ -94,6 +128,7 @@ export function seedIfEmpty(): void {
       recurrenceIntervalDays: null,
       nextDueDate: null,
       streakCount: 0,
+      trackLinks: [],
     },
     {
       id: generateId(),
@@ -110,6 +145,7 @@ export function seedIfEmpty(): void {
       recurrenceIntervalDays: null,
       nextDueDate: null,
       streakCount: 0,
+      trackLinks: [],
     },
     {
       id: generateId(),
@@ -126,6 +162,7 @@ export function seedIfEmpty(): void {
       recurrenceIntervalDays: null,
       nextDueDate: null,
       streakCount: 0,
+      trackLinks: [],
     },
     {
       id: generateId(),
@@ -142,6 +179,7 @@ export function seedIfEmpty(): void {
       recurrenceIntervalDays: null,
       nextDueDate: null,
       streakCount: 0,
+      trackLinks: [{ trackId: quantTrackId, stageId: mathStageId }],
     },
     {
       id: generateId(),
@@ -158,6 +196,7 @@ export function seedIfEmpty(): void {
       recurrenceIntervalDays: 1,
       nextDueDate: todayStr,
       streakCount: 3,
+      trackLinks: [],
     },
     {
       id: generateId(),
@@ -174,6 +213,7 @@ export function seedIfEmpty(): void {
       recurrenceIntervalDays: null,
       nextDueDate: null,
       streakCount: 0,
+      trackLinks: [],
     },
     doneTask,
   ];
@@ -266,4 +306,5 @@ export function seedIfEmpty(): void {
   writeStorage(STORAGE_KEYS.tasks, tasks);
   writeStorage(STORAGE_KEYS.rewards, rewards);
   writeStorage(STORAGE_KEYS.history, history);
+  writeStorage(STORAGE_KEYS.tracks, tracks);
 }

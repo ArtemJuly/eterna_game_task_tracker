@@ -1,5 +1,5 @@
 import { settingsStore } from './stores';
-import type { Settings } from '../types';
+import type { Settings, ThemeName } from '../types';
 
 function normalizeSettings(raw: Settings): Settings {
   return {
@@ -9,6 +9,8 @@ function normalizeSettings(raw: Settings): Settings {
     pomodoroBonusEternas: raw.pomodoroBonusEternas ?? 5,
     streakBonusStepXp: raw.streakBonusStepXp ?? 5,
     streakBonusStepEternas: raw.streakBonusStepEternas ?? 5,
+    theme: raw.theme ?? 'dark',
+    aiApiKey: raw.aiApiKey ?? '',
   };
 }
 
@@ -19,6 +21,8 @@ export function useSettings(): {
   setPomodoroBonusEternas: (eternas: number) => void;
   setStreakBonusStepXp: (xp: number) => void;
   setStreakBonusStepEternas: (eternas: number) => void;
+  setTheme: (theme: ThemeName) => void;
+  setAiApiKey: (key: string) => void;
 } {
   const [rawSettings, setSettings] = settingsStore.useStore();
   const settings = normalizeSettings(rawSettings);
@@ -43,6 +47,14 @@ export function useSettings(): {
     setSettings((prev) => ({ ...prev, streakBonusStepEternas: eternas }));
   }
 
+  function setTheme(theme: ThemeName) {
+    setSettings((prev) => ({ ...prev, theme }));
+  }
+
+  function setAiApiKey(key: string) {
+    setSettings((prev) => ({ ...prev, aiApiKey: key }));
+  }
+
   return {
     settings,
     setPomodoroDuration,
@@ -50,5 +62,7 @@ export function useSettings(): {
     setPomodoroBonusEternas,
     setStreakBonusStepXp,
     setStreakBonusStepEternas,
+    setTheme,
+    setAiApiKey,
   };
 }

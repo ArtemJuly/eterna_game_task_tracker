@@ -7,6 +7,7 @@ import type {
   Reward,
   Settings,
   Task,
+  Track,
 } from '../types';
 import { STORAGE_KEYS } from '../utils/storage';
 import { createStore } from '../utils/store';
@@ -34,4 +35,8 @@ export const settingsStore = createStore<Settings>(STORAGE_KEYS.settings, {
   pomodoroBonusEternas: 5,
   streakBonusStepXp: 5,
   streakBonusStepEternas: 5,
+  theme: 'dark',
+  aiApiKey: '',
 });
+
+export const tracksStore = createStore<Track[]>(STORAGE_KEYS.tracks, []);

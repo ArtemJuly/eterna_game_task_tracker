@@ -1,8 +1,9 @@
-import { characterStore, historyStore, projectsStore, tasksStore } from './stores';
+import { characterStore, historyStore, projectsStore, tasksStore, tracksStore } from './stores';
 import type { Project } from '../types';
 import { generateId } from '../utils/ids';
 import { pushToast } from './useToast';
 import { triggerXpPulse } from './useXpPulse';
+import { pausePomodoroIfRunningForProject } from './usePomodoros';
 
 const MAX_SPRINT_PROJECTS = 3;
 const MAX_ACTIVE_PROJECTS = 5;
@@ -15,7 +16,7 @@ export interface NewProjectInput {
   eternas: number;
 }
 
-function normalizeProject(p: Project): Project {
+function normalizeProject(p: Project, fallbackPriority: number): Project {
   return {
     ...p,
     status: p.status ?? 'active',
@@ -24,6 +25,7 @@ function normalizeProject(p: Project): Project {
     completedAt: p.completedAt ?? null,
     isSprint: p.isSprint ?? false,
     isActive: p.isActive ?? true,
+    priority: p.priority ?? fallbackPriority,
   };
 }
 
@@ -35,9 +37,12 @@ export function useProjects(): {
   completeProject: (id: string) => void;
   toggleSprint: (id: string) => void;
   toggleActive: (id: string) => void;
+  moveProjectPriority: (id: string, direction: 'up' | 'down') => void;
 } {
   const [rawProjects, setProjects] = projectsStore.useStore();
-  const projects = rawProjects.map(normalizeProject);
+  const projects = rawProjects
+    .map((p, index) => normalizeProject(p, index))
+    .sort((a, b) => a.priority - b.priority);
 
   function addProject(input: NewProjectInput) {
     const activeCount = projects.filter((p) => p.isActive && p.status !== 'done').length;
@@ -45,6 +50,7 @@ export function useProjects(): {
     if (!isActive) {
       pushToast('Уже 5 активных проектов — новый проект добавлен как неактивный', 'error');
     }
+    const priority = projects.length > 0 ? Math.max(...projects.map((p) => p.priority)) + 1 : 0;
 
     const project: Project = {
       id: generateId(),
@@ -58,6 +64,7 @@ export function useProjects(): {
       completedAt: null,
       isSprint: false,
       isActive,
+      priority,
     };
     setProjects((prev) => [...prev, project]);
   }
@@ -67,14 +74,22 @@ export function useProjects(): {
   }
 
   function deleteProject(id: string) {
+    pausePomodoroIfRunningForProject(id);
     setProjects((prev) => prev.filter((p) => p.id !== id));
     tasksStore.set((prev) => prev.map((t) => (t.projectId === id ? { ...t, projectId: null } : t)));
+    tracksStore.set((prev) =>
+      prev.map((track) => ({
+        ...track,
+        stages: track.stages.map((s) => (s.projectId === id ? { ...s, projectId: null } : s)),
+      })),
+    );
   }
 
   function completeProject(id: string) {
     const project = projects.find((p) => p.id === id);
     if (!project || project.status === 'done') return;
 
+    pausePomodoroIfRunningForProject(id);
     const completedAt = new Date().toISOString();
     setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, status: 'done', completedAt } : p)));
 
@@ -135,5 +150,30 @@ export function useProjects(): {
     setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, isActive: true } : p)));
   }
 
-  return { projects, addProject, updateProject, deleteProject, completeProject, toggleSprint, toggleActive };
+  function moveProjectPriority(id: string, direction: 'up' | 'down') {
+    const idx = projects.findIndex((p) => p.id === id);
+    const swapWith = direction === 'up' ? idx - 1 : idx + 1;
+    if (idx === -1 || swapWith < 0 || swapWith >= projects.length) return;
+
+    const a = projects[idx];
+    const b = projects[swapWith];
+    setProjects((prev) =>
+      prev.map((p) => {
+        if (p.id === a.id) return { ...p, priority: b.priority };
+        if (p.id === b.id) return { ...p, priority: a.priority };
+        return p;
+      }),
+    );
+  }
+
+  return {
+    projects,
+    addProject,
+    updateProject,
+    deleteProject,
+    completeProject,
+    toggleSprint,
+    toggleActive,
+    moveProjectPriority,
+  };
 }

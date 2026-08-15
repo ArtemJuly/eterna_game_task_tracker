@@ -4,11 +4,19 @@ import { formatRemaining } from '../utils/formatTime';
 import Button from './ui/Button';
 
 interface PomodoroTimerProps {
-  taskId: string;
+  taskId?: string;
+  projectId?: string;
   active: boolean;
+  showStats?: boolean;
 }
 
-export default function PomodoroTimer({ taskId, active }: PomodoroTimerProps) {
+function targetKey(taskId: string | null | undefined, projectId: string | null | undefined): string {
+  if (taskId) return `task:${taskId}`;
+  if (projectId) return `project:${projectId}`;
+  return 'free';
+}
+
+export default function PomodoroTimer({ taskId, projectId, active, showStats = true }: PomodoroTimerProps) {
   const {
     active: activePomodoro,
     startPomodoro,
@@ -20,12 +28,15 @@ export default function PomodoroTimer({ taskId, active }: PomodoroTimerProps) {
   } = usePomodoros();
   const [now, setNow] = useState(Date.now());
 
-  const isRunningHere = activePomodoro?.status === 'running' && activePomodoro.taskId === taskId;
-  const isPausedHere = activePomodoro?.status === 'paused' && activePomodoro.taskId === taskId;
-  const canResumeElsewhere = activePomodoro?.status === 'paused' && activePomodoro.taskId !== taskId && active;
+  const thisKey = targetKey(taskId, projectId);
+  const activeKey = activePomodoro ? targetKey(activePomodoro.taskId, activePomodoro.projectId) : null;
+
+  const isRunningHere = activePomodoro?.status === 'running' && activeKey === thisKey;
+  const isPausedHere = activePomodoro?.status === 'paused' && activeKey === thisKey;
+  const canResumeElsewhere = activePomodoro?.status === 'paused' && activeKey !== thisKey && active;
   const isBlockedByOther = activePomodoro !== null && !isRunningHere && !isPausedHere && !canResumeElsewhere;
-  const count = countCompletedForTask(taskId);
-  const totalMinutes = totalMinutesForTask(taskId);
+  const count = taskId && showStats ? countCompletedForTask(taskId) : 0;
+  const totalMinutes = taskId && showStats ? totalMinutesForTask(taskId) : 0;
 
   const endTime = isRunningHere && activePomodoro?.endsAt ? new Date(activePomodoro.endsAt).getTime() : null;
   const pausedRemainingMs = isPausedHere || canResumeElsewhere ? (activePomodoro?.remainingMs ?? 0) : null;
@@ -77,13 +88,13 @@ export default function PomodoroTimer({ taskId, active }: PomodoroTimerProps) {
       )}
 
       {canResumeElsewhere && (
-        <Button variant="secondary" onClick={() => resumePomodoro(taskId)}>
+        <Button variant="secondary" onClick={() => resumePomodoro({ taskId, projectId })}>
           ▶ Продолжить {formatRemaining(pausedRemainingMs ?? 0)}
         </Button>
       )}
 
       {!isRunningHere && !isPausedHere && !canResumeElsewhere && active && (
-        <Button variant="secondary" disabled={isBlockedByOther} onClick={() => startPomodoro(taskId)}>
+        <Button variant="secondary" disabled={isBlockedByOther} onClick={() => startPomodoro({ taskId, projectId })}>
           🍅 Начать помидор
         </Button>
       )}

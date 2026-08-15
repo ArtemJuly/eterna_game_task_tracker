@@ -8,12 +8,12 @@ interface BadgeProps {
 }
 
 const toneClasses: Record<Tone, string> = {
-  default: 'bg-white/5 text-text-primary border-border',
+  default: 'bg-overlay/5 text-text-primary border-border',
   xp: 'bg-accent-xp/10 text-accent-xp border-accent-xp/30',
   eternas: 'bg-accent-eternas/10 text-accent-eternas border-accent-eternas/30',
   success: 'bg-success/10 text-success border-success/30',
   danger: 'bg-danger/10 text-danger border-danger/30',
-  muted: 'bg-white/5 text-text-muted border-border',
+  muted: 'bg-overlay/5 text-text-muted border-border',
 };
 
 export default function Badge({ children, tone = 'default' }: BadgeProps) {

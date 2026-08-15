@@ -9,6 +9,7 @@ import { getDirectChildren } from '../utils/taskTree';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import TaskModal from '../components/TaskModal';
+import TaskIntakeModal from '../components/TaskIntakeModal';
 import PomodoroTimer from '../components/PomodoroTimer';
 import TodayFocusButton from '../components/TodayFocusButton';
 import { getTodayDateString } from '../utils/today';
@@ -46,17 +47,21 @@ export default function Tasks() {
   const [tab, setTab] = useState<FilterTab>('all');
   const [projectFilter, setProjectFilter] = useState<string>('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [intakeOpen, setIntakeOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const today = getTodayDateString();
 
   const filtered = useMemo(() => {
     return tasks
-      .filter((t) => (tab === 'all' ? t.status !== 'done' : t.status === tab))
+      .filter((t) => (tab === 'all' ? t.status !== 'done' && t.status !== 'cancelled' : t.status === tab))
       .filter((t) => (projectFilter ? t.projectId === projectFilter : true))
       .sort((a, b) => {
         const aFocused = a.focusDate === today ? 1 : 0;
         const bFocused = b.focusDate === today ? 1 : 0;
         if (aFocused !== bFocused) return bFocused - aFocused;
+        const aImportance = a.xp + a.eternas;
+        const bImportance = b.xp + b.eternas;
+        if (aImportance !== bImportance) return bImportance - aImportance;
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
   }, [tasks, tab, projectFilter, today]);
@@ -107,9 +112,14 @@ export default function Tasks() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-text-primary">Задачи</h1>
-        <Button variant="primary" onClick={openCreate}>
-          + Новая задача
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setIntakeOpen(true)}>
+            🤖 Добавить список
+          </Button>
+          <Button variant="primary" onClick={openCreate}>
+            + Новая задача
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center justify-between gap-4">
@@ -120,7 +130,7 @@ export default function Tasks() {
               onClick={() => setTab(t.key)}
               className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
                 tab === t.key
-                  ? 'bg-white/[0.06] text-text-primary'
+                  ? 'bg-overlay/[0.06] text-text-primary'
                   : 'text-text-muted hover:text-text-primary'
               }`}
             >
@@ -163,7 +173,7 @@ export default function Tasks() {
               <div
                 key={task.id}
                 onClick={() => navigate(`/tasks/${task.id}`)}
-                className={`group flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-white/[0.03] ${
+                className={`group flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-overlay/[0.03] ${
                   task.status === 'cancelled' ? 'opacity-60' : ''
                 } ${isFocused ? 'border-accent-xp/50 bg-accent-xp/[0.04]' : 'border-border bg-surface'}`}
               >
@@ -249,6 +259,7 @@ export default function Tasks() {
         onSubmit={handleSubmit}
         initialTask={editingTask}
       />
+      <TaskIntakeModal open={intakeOpen} onClose={() => setIntakeOpen(false)} />
       {dialog}
     </div>
   );

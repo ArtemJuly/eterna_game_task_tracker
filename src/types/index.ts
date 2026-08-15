@@ -5,6 +5,11 @@ export interface Character {
 
 export type TaskStatus = 'planned' | 'in_progress' | 'done' | 'cancelled';
 
+export interface TrackLink {
+  trackId: string;
+  stageId: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -20,6 +25,7 @@ export interface Task {
   recurrenceIntervalDays: number | null;
   nextDueDate: string | null;
   streakCount: number;
+  trackLinks: TrackLink[];
 }
 
 export type ProjectStatus = 'active' | 'done';
@@ -36,6 +42,7 @@ export interface Project {
   completedAt: string | null;
   isSprint: boolean;
   isActive: boolean;
+  priority: number;
 }
 
 export type RewardStatus = 'wanted' | 'saving' | 'available' | 'purchased' | 'cancelled';
@@ -65,7 +72,8 @@ export type PomodoroStatus = 'completed' | 'interrupted';
 
 export interface PomodoroSession {
   id: string;
-  taskId: string;
+  taskId: string | null;
+  projectId: string | null;
   startedAt: string;
   endedAt: string;
   durationMinutes: number;
@@ -75,7 +83,8 @@ export interface PomodoroSession {
 export type ActivePomodoroPhase = 'running' | 'paused';
 
 export interface ActivePomodoro {
-  taskId: string;
+  taskId: string | null;
+  projectId: string | null;
   durationMinutes: number;
   status: ActivePomodoroPhase;
   startedAt: string;
@@ -83,10 +92,36 @@ export interface ActivePomodoro {
   remainingMs: number | null;
 }
 
+export type ThemeName = 'dark' | 'black-gold' | 'white-gold';
+
 export interface Settings {
   pomodoroDurationMinutes: number;
   pomodoroBonusXp: number;
   pomodoroBonusEternas: number;
   streakBonusStepXp: number;
   streakBonusStepEternas: number;
+  theme: ThemeName;
+  aiApiKey: string;
+}
+
+export interface TrackStage {
+  id: string;
+  title: string;
+  description: string;
+  xp: number;
+  level: number;
+  projectId: string | null;
+}
+
+export type TrackStatus = 'active' | 'done';
+
+export interface Track {
+  id: string;
+  title: string;
+  goal: string;
+  createdAt: string;
+  stages: TrackStage[];
+  currentStageIndex: number;
+  status: TrackStatus;
+  completedAt: string | null;
 }

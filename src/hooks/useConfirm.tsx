@@ -1,9 +1,10 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 
 interface ConfirmOptions {
   title: string;
-  message: string;
+  message: ReactNode;
   confirmLabel?: string;
   danger?: boolean;
   onConfirm: () => void;
