@@ -4,7 +4,7 @@ import { useTasks } from '../hooks/useTasks';
 import type { NewTaskInput } from '../hooks/useTasks';
 import { useProjects } from '../hooks/useProjects';
 import { useConfirm } from '../hooks/useConfirm';
-import type { Task, TaskStatus } from '../types';
+import type { Task } from '../types';
 import { getAncestorChain, getDirectChildren } from '../utils/taskTree';
 import { getTodayDateString } from '../utils/today';
 import Badge from '../components/ui/Badge';
@@ -13,27 +13,15 @@ import ProgressBar from '../components/ui/ProgressBar';
 import PomodoroTimer from '../components/PomodoroTimer';
 import TodayFocusButton from '../components/TodayFocusButton';
 import TaskModal from '../components/TaskModal';
+import TaskStatusSelect from '../components/TaskStatusSelect';
 import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier } from '../utils/taskRewards';
 import { formatRecurrence, getStreakStars, isTaskOverdue } from '../utils/recurrence';
-
-const STATUS_LABEL: Record<TaskStatus, string> = {
-  planned: 'Запланирована',
-  in_progress: 'В работе',
-  done: 'Выполнена',
-  cancelled: 'Отменена',
-};
-
-const STATUS_TONE: Record<TaskStatus, 'muted' | 'xp' | 'success' | 'danger'> = {
-  planned: 'muted',
-  in_progress: 'xp',
-  done: 'success',
-  cancelled: 'danger',
-};
 
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { tasks, addTask, updateTask, startTask, completeTask, cancelTask, deleteTask, toggleFocus } = useTasks();
+  const { tasks, addTask, updateTask, startTask, completeTask, cancelTask, setTaskStatus, deleteTask, toggleFocus } =
+    useTasks();
   const { projects } = useProjects();
   const { confirm, dialog } = useConfirm();
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -189,7 +177,7 @@ export default function TaskDetail() {
                 <h1 className={`text-2xl font-bold ${isTerminal ? 'text-text-muted line-through' : 'text-text-primary'}`}>
                   {task.title}
                 </h1>
-                <Badge tone={STATUS_TONE[task.status]}>{STATUS_LABEL[task.status]}</Badge>
+                <TaskStatusSelect status={task.status} onChange={(status) => setTaskStatus(task.id, status)} />
               </div>
               <div className="mt-2 flex items-center gap-2">
                 {project && <Badge tone="default">{project.title}</Badge>}
@@ -306,7 +294,7 @@ export default function TaskDetail() {
                     {child.title}
                   </span>
                   <div className="flex items-center gap-2">
-                    <Badge tone={STATUS_TONE[child.status]}>{STATUS_LABEL[child.status]}</Badge>
+                    <TaskStatusSelect status={child.status} onChange={(status) => setTaskStatus(child.id, status)} />
                     {child.recurrenceIntervalDays !== null && (
                       <Badge tone="muted">🔁 {formatRecurrence(child.recurrenceIntervalDays)}</Badge>
                     )}

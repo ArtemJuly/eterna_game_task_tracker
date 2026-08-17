@@ -1,6 +1,7 @@
 import type {
   ActivePomodoro,
   Character,
+  GoalNode,
   HistoryEntry,
   PomodoroSession,
   Project,
@@ -40,3 +41,5 @@ export const settingsStore = createStore<Settings>(STORAGE_KEYS.settings, {
 });
 
 export const tracksStore = createStore<Track[]>(STORAGE_KEYS.tracks, []);
+
+export const goalNodesStore = createStore<GoalNode[]>(STORAGE_KEYS.goalNodes, []);

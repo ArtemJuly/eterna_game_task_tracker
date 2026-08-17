@@ -124,4 +124,19 @@ export interface Track {
   currentStageIndex: number;
   status: TrackStatus;
   completedAt: string | null;
+  priority: number;
+}
+
+export type GoalNodeType = 'goal' | 'project' | 'track' | 'trackStage' | 'task';
+
+export interface GoalNode {
+  id: string;
+  type: GoalNodeType;
+  parentId: string | null;
+  title: string;
+  projectId: string | null;
+  trackId: string | null;
+  stageId: string | null;
+  taskId: string | null;
+  createdAt: string;
 }

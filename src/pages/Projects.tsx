@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom';
 import { useProjects } from '../hooks/useProjects';
 import { useTasks } from '../hooks/useTasks';
 import Button from '../components/ui/Button';
-import Badge from '../components/ui/Badge';
 import ProgressBar from '../components/ui/ProgressBar';
 import ProjectModal from '../components/ProjectModal';
 import SprintToggleButton from '../components/SprintToggleButton';
 import ActiveStatusToggle from '../components/ActiveStatusToggle';
+import ProjectStatusSelect from '../components/ProjectStatusSelect';
 
 export default function Projects() {
-  const { projects, addProject, toggleSprint, toggleActive, moveProjectPriority } = useProjects();
+  const { projects, addProject, toggleSprint, toggleActive, moveProjectPriority, setProjectStatus } = useProjects();
   const { tasks } = useTasks();
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -86,9 +86,7 @@ export default function Projects() {
                       >
                         {project.title}
                       </div>
-                      <Badge tone={project.status === 'done' ? 'success' : 'muted'}>
-                        {project.status === 'done' ? 'Завершён' : 'В процессе'}
-                      </Badge>
+                      <ProjectStatusSelect status={project.status} onChange={(status) => setProjectStatus(project.id, status)} />
                       {project.status !== 'done' && (
                         <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
                           <ActiveStatusToggle active={project.isActive} onClick={() => toggleActive(project.id)} />

@@ -150,3 +150,55 @@ body {
 .toast-exit {
   animation: toast-out 0.2s ease-in forwards;
 }
+
+/* Дерево карты целей — классические CSS-коннекторы без JS-позиционирования */
+.goal-tree,
+.goal-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.goal-tree ul {
+  padding-left: 32px;
+}
+
+.goal-tree li {
+  position: relative;
+  padding: 6px 0 6px 32px;
+}
+
+.goal-tree > li {
+  padding-left: 0;
+}
+
+.goal-tree li::before,
+.goal-tree li::after {
+  content: '';
+  position: absolute;
+  left: 0;
+}
+
+.goal-tree li::before {
+  top: 24px;
+  width: 24px;
+  height: 0;
+  border-top: 1px solid var(--border);
+}
+
+.goal-tree li::after {
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px solid var(--border);
+}
+
+.goal-tree li:last-child::after {
+  bottom: auto;
+  height: 24px;
+}
+
+.goal-tree > li::before,
+.goal-tree > li::after {
+  display: none;
+}

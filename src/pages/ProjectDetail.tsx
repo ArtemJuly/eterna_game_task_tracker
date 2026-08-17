@@ -5,7 +5,7 @@ import { useTasks } from '../hooks/useTasks';
 import type { NewTaskInput } from '../hooks/useTasks';
 import { usePomodoros } from '../hooks/usePomodoros';
 import { useConfirm } from '../hooks/useConfirm';
-import type { Project, Task, TaskStatus } from '../types';
+import type { Project, Task } from '../types';
 import { getDirectChildren } from '../utils/taskTree';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -16,30 +16,20 @@ import PomodoroTimer from '../components/PomodoroTimer';
 import TodayFocusButton from '../components/TodayFocusButton';
 import SprintToggleButton from '../components/SprintToggleButton';
 import ActiveStatusToggle from '../components/ActiveStatusToggle';
+import TaskStatusSelect from '../components/TaskStatusSelect';
+import ProjectStatusSelect from '../components/ProjectStatusSelect';
 import { getTodayDateString } from '../utils/today';
 import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier } from '../utils/taskRewards';
 import { formatRecurrence, getStreakStars, isTaskOverdue } from '../utils/recurrence';
 import { getProjectPomodoroStats } from '../utils/pomodoroStats';
 
-const STATUS_LABEL: Record<TaskStatus, string> = {
-  planned: 'Запланирована',
-  in_progress: 'В работе',
-  done: 'Выполнена',
-  cancelled: 'Отменена',
-};
-
-const STATUS_TONE: Record<TaskStatus, 'muted' | 'xp' | 'success' | 'danger'> = {
-  planned: 'muted',
-  in_progress: 'xp',
-  done: 'success',
-  cancelled: 'danger',
-};
-
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { projects, updateProject, deleteProject, completeProject, toggleSprint, toggleActive } = useProjects();
-  const { tasks, addTask, updateTask, startTask, completeTask, cancelTask, deleteTask, toggleFocus } = useTasks();
+  const { projects, updateProject, deleteProject, completeProject, setProjectStatus, toggleSprint, toggleActive } =
+    useProjects();
+  const { tasks, addTask, updateTask, startTask, completeTask, cancelTask, setTaskStatus, deleteTask, toggleFocus } =
+    useTasks();
   const { sessions } = usePomodoros();
   const { confirm, dialog } = useConfirm();
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -72,11 +62,14 @@ export default function ProjectDetail() {
   const pomodoroStats = getProjectPomodoroStats(sessions, tasks, project.id);
 
   const topLevelTasks = projectTasks
-    .filter((t) => t.parentTaskId === null && t.status !== 'cancelled')
+    .filter((t) => t.parentTaskId === null && t.status !== 'cancelled' && t.status !== 'done')
     .sort((a, b) => {
-      const aFocused = a.focusDate === today ? 1 : 0;
-      const bFocused = b.focusDate === today ? 1 : 0;
-      if (aFocused !== bFocused) return bFocused - aFocused;
+      const aInProgress = a.status === 'in_progress' ? 1 : 0;
+      const bInProgress = b.status === 'in_progress' ? 1 : 0;
+      if (aInProgress !== bInProgress) return bInProgress - aInProgress;
+      const aImportance = a.xp + a.eternas;
+      const bImportance = b.xp + b.eternas;
+      if (aImportance !== bImportance) return bImportance - aImportance;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
@@ -158,9 +151,9 @@ export default function ProjectDetail() {
                 >
                   {project.title}
                 </h1>
-                <Badge tone={project.status === 'done' ? 'success' : 'muted'}>
-                  {project.status === 'done' ? 'Завершён' : 'В процессе'}
-                </Badge>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <ProjectStatusSelect status={project.status} onChange={(status) => setProjectStatus(project.id, status)} />
+                </div>
                 {project.isSprint && <Badge tone="eternas">🚀 Спринт ×1.2</Badge>}
                 {project.status !== 'done' && (
                   <ActiveStatusToggle active={project.isActive} onClick={() => toggleActive(project.id)} />
@@ -249,7 +242,7 @@ export default function ProjectDetail() {
                     {task.title}
                   </span>
                   <div className="flex items-center gap-2">
-                    <Badge tone={STATUS_TONE[task.status]}>{STATUS_LABEL[task.status]}</Badge>
+                    <TaskStatusSelect status={task.status} onChange={(status) => setTaskStatus(task.id, status)} />
                     {task.recurrenceIntervalDays !== null && (
                       <Badge tone="muted">🔁 {formatRecurrence(task.recurrenceIntervalDays)}</Badge>
                     )}

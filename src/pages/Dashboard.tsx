@@ -2,9 +2,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCharacter } from '../hooks/useCharacter';
 import { useTasks } from '../hooks/useTasks';
 import { useProjects } from '../hooks/useProjects';
+import { useTracks } from '../hooks/useTracks';
+import { useGoalMap } from '../hooks/useGoalMap';
 import { useHistory } from '../hooks/useHistory';
 import { usePomodoros } from '../hooks/usePomodoros';
 import { getLevelProgress } from '../utils/levels';
+import { formatStageLevel, getStageLevelProgress } from '../utils/trackLevels';
 import { useXpPulse } from '../hooks/useXpPulse';
 import { buildCumulativeSeries, buildPomodoroSeries, buildTaskCompletionSeries } from '../utils/chartData';
 import ProgressBar from '../components/ui/ProgressBar';
@@ -23,12 +26,35 @@ export default function Dashboard() {
   const { tasks, completeTask, toggleFocus } = useTasks();
   const today = getTodayDateString();
   const { projects } = useProjects();
+  const { tracks } = useTracks();
+  const { nodes } = useGoalMap();
   const history = useHistory();
   const { sessions } = usePomodoros();
   const pulseTs = useXpPulse();
 
   const { level, next, xpIntoLevel, xpForLevel, percent } = getLevelProgress(character.totalXp);
   const pulse = pulseTs > 0 && Date.now() - pulseTs < 3000;
+
+  const topTrack = tracks.find((t) => t.status !== 'done') ?? tracks[0] ?? null;
+  const topStage = topTrack ? topTrack.stages[topTrack.currentStageIndex] ?? null : null;
+  const stageProgress = topStage ? getStageLevelProgress(topStage.xp) : null;
+  const nextTrackStage = topTrack && topStage ? topTrack.stages[topTrack.currentStageIndex + 1] ?? null : null;
+
+  const topPriorityProject = projects[0];
+  const priorityProjectNode = topPriorityProject
+    ? nodes.find((n) => n.type === 'project' && n.projectId === topPriorityProject.id)
+    : undefined;
+  let enclosingGoalTitle: string | null = null;
+  if (priorityProjectNode) {
+    let current = nodes.find((n) => n.id === priorityProjectNode.parentId);
+    while (current) {
+      if (current.type === 'goal') {
+        enclosingGoalTitle = current.title;
+        break;
+      }
+      current = nodes.find((n) => n.id === current!.parentId);
+    }
+  }
 
   const taskCompletionSeries = buildTaskCompletionSeries(history, 14);
   const taskCompletionTotal = taskCompletionSeries.reduce((sum, p) => sum + p.value, 0);
@@ -67,12 +93,39 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-8">
+      {(enclosingGoalTitle || topPriorityProject) && (
+        <Link
+          to="/goal-map"
+          className="flex items-center gap-2 rounded-lg border border-accent-eternas/40 bg-accent-eternas/[0.06] px-4 py-2.5 text-sm hover:bg-accent-eternas/[0.1]"
+        >
+          {enclosingGoalTitle && (
+            <>
+              <span>🎯</span>
+              <span className="font-medium text-text-primary">{enclosingGoalTitle}</span>
+              {topPriorityProject && <span className="text-text-muted">→</span>}
+            </>
+          )}
+          {topPriorityProject && (
+            <>
+              <span>🏆</span>
+              <span className="font-medium text-text-primary">{topPriorityProject.title}</span>
+            </>
+          )}
+        </Link>
+      )}
+
       <section className="rounded-lg border border-border bg-surface p-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-text-primary">{level.name}</h1>
+            <h1 className="text-2xl font-bold text-text-primary">{topStage ? topStage.title : level.name}</h1>
             <div className="mt-1 text-sm text-text-muted tabular-nums">
-              {character.totalXp} XP
+              {topTrack && topStage && stageProgress ? (
+                <>
+                  {topTrack.title} · {formatStageLevel(stageProgress.level)} · {character.totalXp} XP
+                </>
+              ) : (
+                <>{character.totalXp} XP</>
+              )}
             </div>
           </div>
           <div className="text-right">
@@ -84,9 +137,22 @@ export default function Dashboard() {
         </div>
 
         <div className="mt-5">
-          <ProgressBar percent={percent} gradient pulse={pulse} height={8} />
+          <ProgressBar percent={stageProgress ? stageProgress.percent : percent} gradient pulse={pulse} height={8} />
           <div className="mt-2 text-sm text-text-muted tabular-nums">
-            {next ? (
+            {stageProgress ? (
+              stageProgress.isMaxLevel ? (
+                nextTrackStage ? (
+                  <>Этап «{topStage!.title}» пройден на максимум · впереди «{nextTrackStage.title}»</>
+                ) : (
+                  'Финальный этап трека пройден на максимум!'
+                )
+              ) : (
+                <>
+                  {stageProgress.xpIntoLevel} / {stageProgress.xpForLevel} XP · до уровня{' '}
+                  {formatStageLevel(stageProgress.level + 1)}
+                </>
+              )
+            ) : next ? (
               <>
                 {xpIntoLevel} / {xpForLevel} XP · до уровня «{next.name}»
               </>

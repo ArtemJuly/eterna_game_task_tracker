@@ -1,4 +1,4 @@
-import { tasksStore, tracksStore } from './stores';
+import { goalNodesStore, tasksStore, tracksStore } from './stores';
 import type { Track, TrackLink, TrackStage } from '../types';
 import { generateId } from '../utils/ids';
 import { getStageLevel } from '../utils/trackLevels';
@@ -13,7 +13,7 @@ function normalizeStage(s: TrackStage): TrackStage {
   };
 }
 
-function normalizeTrack(t: Track): Track {
+function normalizeTrack(t: Track, fallbackPriority: number): Track {
   return {
     ...t,
     goal: t.goal ?? '',
@@ -21,6 +21,7 @@ function normalizeTrack(t: Track): Track {
     currentStageIndex: t.currentStageIndex ?? 0,
     status: t.status ?? 'active',
     completedAt: t.completedAt ?? null,
+    priority: t.priority ?? fallbackPriority,
   };
 }
 
@@ -64,11 +65,15 @@ export function useTracks(): {
   moveStage: (trackId: string, stageId: string, direction: 'up' | 'down') => void;
   advanceStage: (trackId: string) => void;
   completeTrack: (trackId: string) => void;
+  moveTrackPriority: (id: string, direction: 'up' | 'down') => void;
 } {
   const [rawTracks, setTracks] = tracksStore.useStore();
-  const tracks = rawTracks.map(normalizeTrack);
+  const tracks = rawTracks
+    .map((t, index) => normalizeTrack(t, index))
+    .sort((a, b) => a.priority - b.priority);
 
   function addTrack(title: string, goal: string) {
+    const priority = tracks.length > 0 ? Math.max(...tracks.map((t) => t.priority)) + 1 : 0;
     const track: Track = {
       id: generateId(),
       title,
@@ -78,6 +83,7 @@ export function useTracks(): {
       currentStageIndex: 0,
       status: 'active',
       completedAt: null,
+      priority,
     };
     setTracks((prev) => [...prev, track]);
   }
@@ -91,12 +97,20 @@ export function useTracks(): {
   }
 
   function deleteTrack(id: string) {
+    const track = tracks.find((t) => t.id === id);
     setTracks((prev) => prev.filter((t) => t.id !== id));
     tasksStore.set((prev) =>
       prev.map((task) => ({
         ...task,
         trackLinks: task.trackLinks.filter((l) => l.trackId !== id),
       })),
+    );
+    goalNodesStore.set((prev) =>
+      prev.map((n) =>
+        (n.type === 'track' || n.type === 'trackStage') && n.trackId === id
+          ? { ...n, type: 'goal', title: track?.title ?? 'Трек удалён', trackId: null, stageId: null }
+          : n,
+      ),
     );
   }
 
@@ -150,6 +164,7 @@ export function useTracks(): {
   }
 
   function deleteStage(trackId: string, stageId: string) {
+    const stage = tracks.find((t) => t.id === trackId)?.stages.find((s) => s.id === stageId);
     setTracks((prev) =>
       prev.map((t) => {
         if (t.id !== trackId) return t;
@@ -167,6 +182,13 @@ export function useTracks(): {
         ...task,
         trackLinks: task.trackLinks.filter((l) => !(l.trackId === trackId && l.stageId === stageId)),
       })),
+    );
+    goalNodesStore.set((prev) =>
+      prev.map((n) =>
+        n.type === 'trackStage' && n.trackId === trackId && n.stageId === stageId
+          ? { ...n, type: 'goal', title: stage?.title ?? 'Этап удалён', trackId: null, stageId: null }
+          : n,
+      ),
     );
   }
 
@@ -203,6 +225,22 @@ export function useTracks(): {
     setTracks((prev) => prev.map((t) => (t.id === trackId ? { ...t, status: 'done', completedAt } : t)));
   }
 
+  function moveTrackPriority(id: string, direction: 'up' | 'down') {
+    const idx = tracks.findIndex((t) => t.id === id);
+    const swapWith = direction === 'up' ? idx - 1 : idx + 1;
+    if (idx === -1 || swapWith < 0 || swapWith >= tracks.length) return;
+
+    const a = tracks[idx];
+    const b = tracks[swapWith];
+    setTracks((prev) =>
+      prev.map((t) => {
+        if (t.id === a.id) return { ...t, priority: b.priority };
+        if (t.id === b.id) return { ...t, priority: a.priority };
+        return t;
+      }),
+    );
+  }
+
   return {
     tracks,
     addTrack,
@@ -216,5 +254,6 @@ export function useTracks(): {
     moveStage,
     advanceStage,
     completeTrack,
+    moveTrackPriority,
   };
 }

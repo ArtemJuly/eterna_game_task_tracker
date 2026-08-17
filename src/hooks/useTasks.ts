@@ -1,4 +1,4 @@
-import { characterStore, historyStore, projectsStore, settingsStore, tasksStore } from './stores';
+import { characterStore, goalNodesStore, historyStore, projectsStore, settingsStore, tasksStore } from './stores';
 import type { Task, TaskStatus, TrackLink } from '../types';
 import { generateId } from '../utils/ids';
 import { pushToast } from './useToast';
@@ -49,6 +49,7 @@ export function useTasks(): {
   startTask: (id: string) => void;
   completeTask: (id: string) => void;
   cancelTask: (id: string) => void;
+  setTaskStatus: (id: string, status: TaskStatus) => void;
   deleteTask: (id: string) => void;
   toggleFocus: (id: string) => void;
 } {
@@ -192,6 +193,13 @@ export function useTasks(): {
     setTasks((prev) =>
       prev.filter((t) => t.id !== id).map((t) => (t.parentTaskId === id ? { ...t, parentTaskId: newParentId } : t)),
     );
+    goalNodesStore.set((prev) =>
+      prev.map((n) =>
+        n.type === 'task' && n.taskId === id
+          ? { ...n, type: 'goal', title: task?.title ?? 'Задача удалена', taskId: null }
+          : n,
+      ),
+    );
   }
 
   function cancelTask(id: string) {
@@ -214,6 +222,25 @@ export function useTasks(): {
     ]);
   }
 
+  function setTaskStatus(id: string, status: TaskStatus) {
+    const task = tasks.find((t) => t.id === id);
+    if (!task || task.status === status) return;
+
+    if (status === 'done') {
+      completeTask(id);
+      return;
+    }
+    if (status === 'cancelled' && task.status !== 'done') {
+      cancelTask(id);
+      return;
+    }
+    // Reward-neutral transitions: reverting to planned/in_progress, or reopening a
+    // done/cancelled task. No history/reward changes — those only happen via
+    // completeTask/cancelTask above.
+    pausePomodoroIfRunningForTask(id);
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
+  }
+
   function toggleFocus(id: string) {
     const today = getTodayDateString();
     const task = tasks.find((t) => t.id === id);
@@ -234,5 +261,5 @@ export function useTasks(): {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, focusDate: today } : t)));
   }
 
-  return { tasks, addTask, updateTask, startTask, completeTask, cancelTask, deleteTask, toggleFocus };
+  return { tasks, addTask, updateTask, startTask, completeTask, cancelTask, setTaskStatus, deleteTask, toggleFocus };
 }

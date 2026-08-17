@@ -8,6 +8,7 @@ export const STORAGE_KEYS = {
   activePomodoro: 'eterna_active_pomodoro',
   settings: 'eterna_settings',
   tracks: 'eterna_tracks',
+  goalNodes: 'eterna_goal_nodes',
 } as const;
 
 export function readStorage<T>(key: string, fallback: T): T {

@@ -10,6 +10,7 @@ import History from './pages/History';
 import Settings from './pages/Settings';
 import Tracks from './pages/Tracks';
 import TrackDetail from './pages/TrackDetail';
+import GoalMap from './pages/GoalMap';
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/rewards" element={<Rewards />} />
           <Route path="/tracks" element={<Tracks />} />
           <Route path="/tracks/:id" element={<TrackDetail />} />
+          <Route path="/goal-map" element={<GoalMap />} />
           <Route path="/history" element={<History />} />
           <Route path="/settings" element={<Settings />} />
         </Route>

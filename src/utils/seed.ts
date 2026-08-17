@@ -73,6 +73,7 @@ export function seedIfEmpty(): void {
       currentStageIndex: 0,
       status: 'active',
       completedAt: null,
+      priority: 0,
       stages: [
         { id: mathStageId, title: 'Математик', description: '', xp: 130, level: 2, projectId: null },
         { id: generateId(), title: 'Программирование', description: '', xp: 0, level: 1, projectId: null },
@@ -87,6 +88,7 @@ export function seedIfEmpty(): void {
       currentStageIndex: 0,
       status: 'active',
       completedAt: null,
+      priority: 1,
       stages: [{ id: generateId(), title: 'Разговорный', description: '', xp: 40, level: 1, projectId: null }],
     },
   ];

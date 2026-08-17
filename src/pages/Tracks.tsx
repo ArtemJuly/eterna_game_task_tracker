@@ -8,7 +8,7 @@ import TrackModal from '../components/TrackModal';
 import { formatStageLevel, getStageLevelProgress } from '../utils/trackLevels';
 
 export default function Tracks() {
-  const { tracks, addTrack } = useTracks();
+  const { tracks, addTrack, moveTrackPriority } = useTracks();
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
@@ -25,8 +25,8 @@ export default function Tracks() {
           Треков пока нет
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
-          {tracks.map((track) => {
+        <div className="flex flex-col gap-3">
+          {tracks.map((track, index) => {
             const currentStage = track.stages[track.currentStageIndex] ?? null;
             const progress = currentStage ? getStageLevelProgress(currentStage.xp) : null;
 
@@ -34,28 +34,52 @@ export default function Tracks() {
               <Link
                 key={track.id}
                 to={`/tracks/${track.id}`}
-                className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 hover:bg-overlay/[0.04] transition-colors"
+                className="flex gap-4 rounded-lg border border-border bg-surface p-4 hover:bg-overlay/[0.04] transition-colors"
               >
-                <div className="flex items-center gap-2">
-                  <div className="font-semibold text-text-primary">{track.title}</div>
-                  {track.status === 'done' && <Badge tone="success">Завершён</Badge>}
+                <div
+                  className="flex flex-col items-center gap-1 pt-0.5"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                >
+                  <span className="text-lg font-bold text-text-muted tabular-nums">#{index + 1}</span>
+                  <div className="flex flex-col">
+                    <Button variant="ghost" disabled={index === 0} onClick={() => moveTrackPriority(track.id, 'up')}>
+                      ▲
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      disabled={index === tracks.length - 1}
+                      onClick={() => moveTrackPriority(track.id, 'down')}
+                    >
+                      ▼
+                    </Button>
+                  </div>
                 </div>
 
-                {currentStage && progress ? (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-text-primary">{currentStage.title}</span>
-                      <Badge tone="xp">{formatStageLevel(progress.level)}</Badge>
-                      {progress.isMaxLevel && <Badge tone="success">Готов к переходу</Badge>}
-                    </div>
-                    <ProgressBar percent={progress.percent} />
-                    <div className="text-xs text-text-muted tabular-nums">
-                      Этап {track.currentStageIndex + 1} / {track.stages.length}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-sm text-text-muted">Этапов пока нет</div>
-                )}
+                <div className="flex flex-1 flex-col gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold text-text-primary">{track.title}</div>
+                    {track.status === 'done' && <Badge tone="success">Завершён</Badge>}
+                  </div>
+
+                  {currentStage && progress ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-text-primary">{currentStage.title}</span>
+                        <Badge tone="xp">{formatStageLevel(progress.level)}</Badge>
+                        {progress.isMaxLevel && <Badge tone="success">Готов к переходу</Badge>}
+                      </div>
+                      <ProgressBar percent={progress.percent} />
+                      <div className="text-xs text-text-muted tabular-nums">
+                        Этап {track.currentStageIndex + 1} / {track.stages.length}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-text-muted">Этапов пока нет</div>
+                  )}
+                </div>
               </Link>
             );
           })}

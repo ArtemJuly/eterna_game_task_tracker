@@ -10,6 +10,7 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import TaskModal from '../components/TaskModal';
 import TaskIntakeModal from '../components/TaskIntakeModal';
+import TaskStatusSelect from '../components/TaskStatusSelect';
 import PomodoroTimer from '../components/PomodoroTimer';
 import TodayFocusButton from '../components/TodayFocusButton';
 import { getTodayDateString } from '../utils/today';
@@ -25,23 +26,10 @@ const TABS: { key: FilterTab; label: string }[] = [
   { key: 'done', label: 'Выполнены' },
 ];
 
-const STATUS_LABEL: Record<TaskStatus, string> = {
-  planned: 'Запланирована',
-  in_progress: 'В работе',
-  done: 'Выполнена',
-  cancelled: 'Отменена',
-};
-
-const STATUS_TONE: Record<TaskStatus, 'muted' | 'xp' | 'success' | 'danger'> = {
-  planned: 'muted',
-  in_progress: 'xp',
-  done: 'success',
-  cancelled: 'danger',
-};
-
 export default function Tasks() {
   const navigate = useNavigate();
-  const { tasks, addTask, updateTask, startTask, completeTask, cancelTask, deleteTask, toggleFocus } = useTasks();
+  const { tasks, addTask, updateTask, startTask, completeTask, cancelTask, setTaskStatus, deleteTask, toggleFocus } =
+    useTasks();
   const { projects } = useProjects();
   const { confirm, dialog } = useConfirm();
   const [tab, setTab] = useState<FilterTab>('all');
@@ -59,6 +47,9 @@ export default function Tasks() {
         const aFocused = a.focusDate === today ? 1 : 0;
         const bFocused = b.focusDate === today ? 1 : 0;
         if (aFocused !== bFocused) return bFocused - aFocused;
+        const aInProgress = a.status === 'in_progress' ? 1 : 0;
+        const bInProgress = b.status === 'in_progress' ? 1 : 0;
+        if (aInProgress !== bInProgress) return bInProgress - aInProgress;
         const aImportance = a.xp + a.eternas;
         const bImportance = b.xp + b.eternas;
         if (aImportance !== bImportance) return bImportance - aImportance;
@@ -191,7 +182,7 @@ export default function Tasks() {
                   <div className="flex items-center gap-2">
                     {project && <Badge tone="default">{project.title}</Badge>}
                     {parentTask && <Badge tone="muted">↳ {parentTask.title}</Badge>}
-                    <Badge tone={STATUS_TONE[task.status]}>{STATUS_LABEL[task.status]}</Badge>
+                    <TaskStatusSelect status={task.status} onChange={(status) => setTaskStatus(task.id, status)} />
                     {task.recurrenceIntervalDays !== null && (
                       <Badge tone="muted">🔁 {formatRecurrence(task.recurrenceIntervalDays)}</Badge>
                     )}

@@ -1,5 +1,5 @@
-import { characterStore, historyStore, projectsStore, tasksStore, tracksStore } from './stores';
-import type { Project } from '../types';
+import { characterStore, goalNodesStore, historyStore, projectsStore, tasksStore, tracksStore } from './stores';
+import type { Project, ProjectStatus } from '../types';
 import { generateId } from '../utils/ids';
 import { pushToast } from './useToast';
 import { triggerXpPulse } from './useXpPulse';
@@ -35,6 +35,7 @@ export function useProjects(): {
   updateProject: (id: string, patch: Partial<NewProjectInput>) => void;
   deleteProject: (id: string) => void;
   completeProject: (id: string) => void;
+  setProjectStatus: (id: string, status: ProjectStatus) => void;
   toggleSprint: (id: string) => void;
   toggleActive: (id: string) => void;
   moveProjectPriority: (id: string, direction: 'up' | 'down') => void;
@@ -74,6 +75,7 @@ export function useProjects(): {
   }
 
   function deleteProject(id: string) {
+    const project = projects.find((p) => p.id === id);
     pausePomodoroIfRunningForProject(id);
     setProjects((prev) => prev.filter((p) => p.id !== id));
     tasksStore.set((prev) => prev.map((t) => (t.projectId === id ? { ...t, projectId: null } : t)));
@@ -82,6 +84,13 @@ export function useProjects(): {
         ...track,
         stages: track.stages.map((s) => (s.projectId === id ? { ...s, projectId: null } : s)),
       })),
+    );
+    goalNodesStore.set((prev) =>
+      prev.map((n) =>
+        n.type === 'project' && n.projectId === id
+          ? { ...n, type: 'goal', title: project?.title ?? 'Проект удалён', projectId: null }
+          : n,
+      ),
     );
   }
 
@@ -112,6 +121,18 @@ export function useProjects(): {
 
     triggerXpPulse();
     pushToast(`Проект завершён: +${project.xp} XP · +${project.eternas} ✦`, 'success');
+  }
+
+  function setProjectStatus(id: string, status: ProjectStatus) {
+    const project = projects.find((p) => p.id === id);
+    if (!project || project.status === status) return;
+
+    if (status === 'done') {
+      completeProject(id);
+      return;
+    }
+    // Reopening a completed project: reward-neutral, no clawback of already-granted XP/eternas.
+    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, status: 'active', completedAt: null } : p)));
   }
 
   function toggleSprint(id: string) {
@@ -172,6 +193,7 @@ export function useProjects(): {
     updateProject,
     deleteProject,
     completeProject,
+    setProjectStatus,
     toggleSprint,
     toggleActive,
     moveProjectPriority,

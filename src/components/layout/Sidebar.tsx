@@ -10,6 +10,7 @@ const navItems = [
   { to: '/tasks', label: 'Задачи' },
   { to: '/projects', label: 'Проекты' },
   { to: '/tracks', label: 'Треки' },
+  { to: '/goal-map', label: 'Карта целей' },
   { to: '/rewards', label: 'Магазин' },
   { to: '/history', label: 'История' },
   { to: '/settings', label: 'Настройки' },
