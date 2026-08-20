@@ -112,6 +112,7 @@ export default function TaskIntakeModal({ open, onClose }: TaskIntakeModalProps)
         xp: d.xp,
         eternas: d.eternas,
         status: 'planned',
+        dueDate: null,
         recurrenceIntervalDays: null,
         trackLinks: d.trackId && d.stageId ? [{ trackId: d.trackId, stageId: d.stageId }] : [],
       });

@@ -6,9 +6,16 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  footer?: ReactNode;
+  size?: 'md' | 'lg';
 }
 
-export default function Modal({ open, onClose, title, children }: ModalProps) {
+const SIZE_CLASSES: Record<'md' | 'lg', string> = {
+  md: 'max-w-md',
+  lg: 'max-w-lg',
+};
+
+export default function Modal({ open, onClose, title, children, footer, size = 'md' }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     function onKeyDown(e: KeyboardEvent) {
@@ -22,14 +29,14 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-8"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-lg border border-border bg-surface p-5"
+        className={`flex max-h-full w-full ${SIZE_CLASSES[size]} flex-col rounded-lg border border-border bg-surface`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
           <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
           <button
             onClick={onClose}
@@ -38,7 +45,8 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
             ✕
           </button>
         </div>
-        {children}
+        <div className="overflow-y-auto px-5 py-4">{children}</div>
+        {footer && <div className="flex shrink-0 justify-end gap-2 border-t border-border px-5 py-4">{footer}</div>}
       </div>
     </div>
   );

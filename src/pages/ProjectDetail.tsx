@@ -17,11 +17,13 @@ import TodayFocusButton from '../components/TodayFocusButton';
 import SprintToggleButton from '../components/SprintToggleButton';
 import ActiveStatusToggle from '../components/ActiveStatusToggle';
 import TaskStatusSelect from '../components/TaskStatusSelect';
+import TaskDueDateControl from '../components/TaskDueDateControl';
 import ProjectStatusSelect from '../components/ProjectStatusSelect';
 import { getTodayDateString } from '../utils/today';
 import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier } from '../utils/taskRewards';
-import { formatRecurrence, getStreakStars, isTaskOverdue } from '../utils/recurrence';
+import { getStreakStars, isTaskOverdue } from '../utils/recurrence';
 import { getProjectPomodoroStats } from '../utils/pomodoroStats';
+import { TASK_SORT_OPTIONS, compareTasks, type TaskSortMode } from '../utils/taskSort';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -35,6 +37,7 @@ export default function ProjectDetail() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [sortMode, setSortMode] = useState<TaskSortMode>('urgency');
   const today = getTodayDateString();
 
   const foundProject = projects.find((p) => p.id === id);
@@ -63,15 +66,7 @@ export default function ProjectDetail() {
 
   const topLevelTasks = projectTasks
     .filter((t) => t.parentTaskId === null && t.status !== 'cancelled' && t.status !== 'done')
-    .sort((a, b) => {
-      const aInProgress = a.status === 'in_progress' ? 1 : 0;
-      const bInProgress = b.status === 'in_progress' ? 1 : 0;
-      if (aInProgress !== bInProgress) return bInProgress - aInProgress;
-      const aImportance = a.xp + a.eternas;
-      const bImportance = b.xp + b.eternas;
-      if (aImportance !== bImportance) return bImportance - aImportance;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+    .sort((a, b) => compareTasks(a, b, sortMode, today));
 
   function handleDeleteProject() {
     confirm({
@@ -203,9 +198,22 @@ export default function ProjectDetail() {
 
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-text-primary">Задачи</h2>
-        <Button variant="primary" onClick={openCreateTask}>
-          + Новая задача
-        </Button>
+        <div className="flex items-center gap-2">
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as TaskSortMode)}
+            className="rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+          >
+            {TASK_SORT_OPTIONS.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <Button variant="primary" onClick={openCreateTask}>
+            + Новая задача
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -243,9 +251,9 @@ export default function ProjectDetail() {
                   </span>
                   <div className="flex items-center gap-2">
                     <TaskStatusSelect status={task.status} onChange={(status) => setTaskStatus(task.id, status)} />
-                    {task.recurrenceIntervalDays !== null && (
-                      <Badge tone="muted">🔁 {formatRecurrence(task.recurrenceIntervalDays)}</Badge>
-                    )}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <TaskDueDateControl task={task} onUpdate={(patch) => updateTask(task.id, patch)} />
+                    </div>
                     {task.streakCount > 0 && <Badge tone="eternas">🔥 ×{task.streakCount}</Badge>}
                     {getStreakStars(task.streakCount) > 0 && (
                       <Badge tone="xp">{'⭐'.repeat(getStreakStars(task.streakCount))}</Badge>

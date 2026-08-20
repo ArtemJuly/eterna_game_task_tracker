@@ -7,7 +7,10 @@ export const RECURRENCE_PRESETS: { label: string; days: number }[] = [
 ];
 
 export function isTaskOverdue(task: Task, today: string): boolean {
-  return task.recurrenceIntervalDays !== null && task.nextDueDate !== null && task.nextDueDate < today;
+  if (task.status === 'done' || task.status === 'cancelled') return false;
+  if (task.recurrenceIntervalDays !== null && task.nextDueDate !== null && task.nextDueDate < today) return true;
+  if (task.dueDate !== null && task.dueDate < today) return true;
+  return false;
 }
 
 export function formatRecurrence(intervalDays: number): string {

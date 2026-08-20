@@ -11,11 +11,13 @@ import Badge from '../components/ui/Badge';
 import TaskModal from '../components/TaskModal';
 import TaskIntakeModal from '../components/TaskIntakeModal';
 import TaskStatusSelect from '../components/TaskStatusSelect';
+import TaskDueDateControl from '../components/TaskDueDateControl';
 import PomodoroTimer from '../components/PomodoroTimer';
 import TodayFocusButton from '../components/TodayFocusButton';
 import { getTodayDateString } from '../utils/today';
 import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier } from '../utils/taskRewards';
-import { formatRecurrence, getStreakStars, isTaskOverdue } from '../utils/recurrence';
+import { getStreakStars, isTaskOverdue } from '../utils/recurrence';
+import { TASK_SORT_OPTIONS, compareTasks, type TaskSortMode } from '../utils/taskSort';
 
 type FilterTab = 'all' | TaskStatus;
 
@@ -34,6 +36,7 @@ export default function Tasks() {
   const { confirm, dialog } = useConfirm();
   const [tab, setTab] = useState<FilterTab>('all');
   const [projectFilter, setProjectFilter] = useState<string>('');
+  const [sortMode, setSortMode] = useState<TaskSortMode>('urgency');
   const [modalOpen, setModalOpen] = useState(false);
   const [intakeOpen, setIntakeOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -43,19 +46,8 @@ export default function Tasks() {
     return tasks
       .filter((t) => (tab === 'all' ? t.status !== 'done' && t.status !== 'cancelled' : t.status === tab))
       .filter((t) => (projectFilter ? t.projectId === projectFilter : true))
-      .sort((a, b) => {
-        const aFocused = a.focusDate === today ? 1 : 0;
-        const bFocused = b.focusDate === today ? 1 : 0;
-        if (aFocused !== bFocused) return bFocused - aFocused;
-        const aInProgress = a.status === 'in_progress' ? 1 : 0;
-        const bInProgress = b.status === 'in_progress' ? 1 : 0;
-        if (aInProgress !== bInProgress) return bInProgress - aInProgress;
-        const aImportance = a.xp + a.eternas;
-        const bImportance = b.xp + b.eternas;
-        if (aImportance !== bImportance) return bImportance - aImportance;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      });
-  }, [tasks, tab, projectFilter, today]);
+      .sort((a, b) => compareTasks(a, b, sortMode, today));
+  }, [tasks, tab, projectFilter, sortMode, today]);
 
   function openCreate() {
     setEditingTask(null);
@@ -130,18 +122,31 @@ export default function Tasks() {
           ))}
         </div>
 
-        <select
-          value={projectFilter}
-          onChange={(e) => setProjectFilter(e.target.value)}
-          className="rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
-        >
-          <option value="">Все проекты</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.title}
-            </option>
-          ))}
-        </select>
+        <div className="flex gap-2">
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as TaskSortMode)}
+            className="rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+          >
+            {TASK_SORT_OPTIONS.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            className="rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+          >
+            <option value="">Все проекты</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -183,9 +188,9 @@ export default function Tasks() {
                     {project && <Badge tone="default">{project.title}</Badge>}
                     {parentTask && <Badge tone="muted">↳ {parentTask.title}</Badge>}
                     <TaskStatusSelect status={task.status} onChange={(status) => setTaskStatus(task.id, status)} />
-                    {task.recurrenceIntervalDays !== null && (
-                      <Badge tone="muted">🔁 {formatRecurrence(task.recurrenceIntervalDays)}</Badge>
-                    )}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <TaskDueDateControl task={task} onUpdate={(patch) => updateTask(task.id, patch)} />
+                    </div>
                     {task.streakCount > 0 && <Badge tone="eternas">🔥 ×{task.streakCount}</Badge>}
                     {getStreakStars(task.streakCount) > 0 && (
                       <Badge tone="xp">{'⭐'.repeat(getStreakStars(task.streakCount))}</Badge>

@@ -17,6 +17,7 @@ import {
 } from '../utils/aiTaskEstimate';
 import Modal from './ui/Modal';
 import Button from './ui/Button';
+import DueDatePicker from './DueDatePicker';
 
 const PRESET_DAYS = RECURRENCE_PRESETS.map((p) => p.days);
 
@@ -55,11 +56,13 @@ export default function TaskModal({
   const [xp, setXp] = useState(20);
   const [eternas, setEternas] = useState(5);
   const [status, setStatus] = useState<TaskStatus>('planned');
+  const [dueDate, setDueDate] = useState<string | null>(null);
   const [recurrenceMode, setRecurrenceMode] = useState('none');
   const [customDays, setCustomDays] = useState(3);
   const [trackLinks, setTrackLinks] = useState<TrackLink[]>([]);
   const [pickerTrackId, setPickerTrackId] = useState('');
   const [pickerStageId, setPickerStageId] = useState('');
+  const [trackPickerOpen, setTrackPickerOpen] = useState(false);
   const [estimating, setEstimating] = useState(false);
   const [lastEstimate, setLastEstimate] = useState<({ key: string } & TaskEstimate) | null>(null);
 
@@ -72,12 +75,14 @@ export default function TaskModal({
     setXp(initialTask?.xp ?? 20);
     setEternas(initialTask?.eternas ?? 5);
     setStatus(initialTask?.status ?? 'planned');
+    setDueDate(initialTask?.dueDate ?? null);
     const intervalDays = initialTask?.recurrenceIntervalDays ?? null;
     setRecurrenceMode(modeForInterval(intervalDays));
     if (intervalDays !== null && !PRESET_DAYS.includes(intervalDays)) setCustomDays(intervalDays);
     setTrackLinks(initialTask?.trackLinks ?? []);
     setPickerTrackId('');
     setPickerStageId('');
+    setTrackPickerOpen(false);
     setLastEstimate(null);
   }, [open, initialTask, defaultProjectId, defaultParentTaskId]);
 
@@ -183,6 +188,7 @@ export default function TaskModal({
       xp,
       eternas,
       status,
+      dueDate,
       recurrenceIntervalDays,
       trackLinks,
     });
@@ -194,91 +200,127 @@ export default function TaskModal({
       open={open}
       onClose={onClose}
       title={initialTask ? 'Редактировать задачу' : defaultParentTaskId ? 'Новая подзадача' : 'Новая задача'}
+      size="lg"
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Отмена
+          </Button>
+          <Button type="submit" form="task-form" variant="primary">
+            Сохранить
+          </Button>
+        </>
+      }
     >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div>
-          <label className="mb-1 block text-sm text-text-muted">Название</label>
-          <input
-            autoFocus
-            required
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
-          />
-        </div>
+      <form id="task-form" onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <input
+          autoFocus
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Название задачи"
+          className="w-full rounded border border-border bg-bg px-3 py-2 text-base font-medium text-text-primary outline-none focus:border-accent-xp"
+        />
 
-        <div>
-          <label className="mb-1 block text-sm text-text-muted">Описание</label>
+        <div className="flex items-start gap-2">
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            placeholder="Опишите, что нужно сделать..."
+            rows={2}
+            placeholder="Описание..."
             className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
           />
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!title.trim() || estimating}
+            onClick={handleAiEstimate}
+            className="shrink-0 whitespace-nowrap"
+          >
+            {estimating ? '...' : '🤖 AI'}
+          </Button>
         </div>
 
-        <div>
-          <label className="mb-1 block text-sm text-text-muted">Проект</label>
-          <select
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-            className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
-          >
-            <option value="">Без проекта</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title}
-              </option>
-            ))}
-          </select>
-        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">Проект</label>
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+            >
+              <option value="">Без проекта</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">Родительская задача</label>
+            <select
+              value={parentTaskId}
+              onChange={(e) => setParentTaskId(e.target.value)}
+              className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+            >
+              <option value="">Нет</option>
+              {parentOptions.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div>
-          <label className="mb-1 block text-sm text-text-muted">Родительская задача</label>
-          <select
-            value={parentTaskId}
-            onChange={(e) => setParentTaskId(e.target.value)}
-            className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
-          >
-            <option value="">Нет — самостоятельная задача</option>
-            {parentOptions.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.title}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm text-text-muted">Повторение</label>
-          <select
-            value={recurrenceMode}
-            onChange={(e) => setRecurrenceMode(e.target.value)}
-            className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
-          >
-            <option value="none">Нет — разовая задача</option>
-            {RECURRENCE_PRESETS.map((p) => (
-              <option key={p.days} value={p.days}>
-                {p.label}
-              </option>
-            ))}
-            <option value="custom">Свой интервал</option>
-          </select>
-          {recurrenceMode === 'custom' && (
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">XP</label>
             <input
               type="number"
-              min={1}
-              value={customDays}
-              onChange={(e) => setCustomDays(Number(e.target.value))}
-              placeholder="Каждые сколько дней"
-              className="mt-2 w-32 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary tabular-nums outline-none focus:border-accent-xp"
+              min={0}
+              value={xp}
+              onChange={(e) => setXp(Number(e.target.value))}
+              className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary tabular-nums outline-none focus:border-accent-xp"
             />
-          )}
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">Этерны</label>
+            <input
+              type="number"
+              min={0}
+              value={eternas}
+              onChange={(e) => setEternas(Number(e.target.value))}
+              className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary tabular-nums outline-none focus:border-accent-xp"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">Статус</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as TaskStatus)}
+              className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+            >
+              <option value="planned">Запланирована</option>
+              <option value="in_progress">В работе</option>
+              <option value="done">Выполнена</option>
+              <option value="cancelled">Отменена</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">Срок</label>
+            <DueDatePicker
+              dueDate={dueDate}
+              onDueDateChange={setDueDate}
+              recurrenceMode={recurrenceMode}
+              onRecurrenceModeChange={setRecurrenceMode}
+              customDays={customDays}
+              onCustomDaysChange={setCustomDays}
+            />
+          </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-sm text-text-muted">Треки развития</label>
           {trackLinks.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {trackLinks.map((link) => {
@@ -302,96 +344,54 @@ export default function TaskModal({
               })}
             </div>
           )}
-          <div className="flex gap-2">
-            <select
-              value={pickerTrackId}
-              onChange={(e) => {
-                setPickerTrackId(e.target.value);
-                setPickerStageId('');
-              }}
-              className="flex-1 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+          {trackPickerOpen ? (
+            <div className="flex gap-2">
+              <select
+                value={pickerTrackId}
+                onChange={(e) => {
+                  setPickerTrackId(e.target.value);
+                  setPickerStageId('');
+                }}
+                className="flex-1 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+              >
+                <option value="">Выбрать трек</option>
+                {availableTracks.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.title}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={pickerStageId}
+                onChange={(e) => setPickerStageId(e.target.value)}
+                disabled={!pickerTrackId}
+                className="flex-1 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp disabled:opacity-50"
+              >
+                <option value="">Этап</option>
+                {pickerStages.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.title}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!pickerTrackId || !pickerStageId}
+                onClick={addTrackLink}
+              >
+                Ок
+              </Button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setTrackPickerOpen(true)}
+              className="text-sm text-text-muted hover:text-text-primary"
             >
-              <option value="">Выбрать трек</option>
-              {availableTracks.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.title}
-                </option>
-              ))}
-            </select>
-            <select
-              value={pickerStageId}
-              onChange={(e) => setPickerStageId(e.target.value)}
-              disabled={!pickerTrackId}
-              className="flex-1 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp disabled:opacity-50"
-            >
-              <option value="">Этап</option>
-              {pickerStages.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.title}
-                </option>
-              ))}
-            </select>
-            <Button type="button" variant="secondary" disabled={!pickerTrackId || !pickerStageId} onClick={addTrackLink}>
-              + Добавить
-            </Button>
-          </div>
-        </div>
-
-        <div>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!title.trim() || estimating}
-            onClick={handleAiEstimate}
-          >
-            {estimating ? 'Оцениваю...' : '🤖 Оценить AI'}
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="mb-1 block text-sm text-text-muted">XP</label>
-            <input
-              type="number"
-              min={0}
-              value={xp}
-              onChange={(e) => setXp(Number(e.target.value))}
-              className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary tabular-nums outline-none focus:border-accent-xp"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-text-muted">Этерны</label>
-            <input
-              type="number"
-              min={0}
-              value={eternas}
-              onChange={(e) => setEternas(Number(e.target.value))}
-              className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary tabular-nums outline-none focus:border-accent-xp"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm text-text-muted">Статус</label>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as TaskStatus)}
-            className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
-          >
-            <option value="planned">Запланирована</option>
-            <option value="in_progress">В работе</option>
-            <option value="done">Выполнена</option>
-            <option value="cancelled">Отменена</option>
-          </select>
-        </div>
-
-        <div className="mt-2 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Отмена
-          </Button>
-          <Button type="submit" variant="primary">
-            Сохранить
-          </Button>
+              + Привязать к треку
+            </button>
+          )}
         </div>
       </form>
     </Modal>

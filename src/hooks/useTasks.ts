@@ -20,6 +20,7 @@ export interface NewTaskInput {
   xp: number;
   eternas: number;
   status: TaskStatus;
+  dueDate: string | null;
   recurrenceIntervalDays: number | null;
   trackLinks: TrackLink[];
 }
@@ -27,6 +28,7 @@ export interface NewTaskInput {
 function normalizeTask(t: Task): Task {
   return {
     ...t,
+    dueDate: t.dueDate ?? null,
     recurrenceIntervalDays: t.recurrenceIntervalDays ?? null,
     nextDueDate: t.nextDueDate ?? null,
     streakCount: t.streakCount ?? 0,
@@ -70,6 +72,7 @@ export function useTasks(): {
       createdAt: new Date().toISOString(),
       completedAt: null,
       focusDate: null,
+      dueDate: input.dueDate,
       recurrenceIntervalDays: input.recurrenceIntervalDays,
       nextDueDate: input.recurrenceIntervalDays !== null ? today : null,
       streakCount: 0,

@@ -14,8 +14,9 @@ import PomodoroTimer from '../components/PomodoroTimer';
 import TodayFocusButton from '../components/TodayFocusButton';
 import TaskModal from '../components/TaskModal';
 import TaskStatusSelect from '../components/TaskStatusSelect';
+import TaskDueDateControl from '../components/TaskDueDateControl';
 import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier } from '../utils/taskRewards';
-import { formatRecurrence, getStreakStars, isTaskOverdue } from '../utils/recurrence';
+import { getStreakStars, isTaskOverdue } from '../utils/recurrence';
 
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
@@ -181,9 +182,7 @@ export default function TaskDetail() {
               </div>
               <div className="mt-2 flex items-center gap-2">
                 {project && <Badge tone="default">{project.title}</Badge>}
-                {task.recurrenceIntervalDays !== null && (
-                  <Badge tone="muted">🔁 {formatRecurrence(task.recurrenceIntervalDays)}</Badge>
-                )}
+                <TaskDueDateControl task={task} onUpdate={(patch) => updateTask(task.id, patch)} />
                 {task.streakCount > 0 && <Badge tone="eternas">🔥 ×{task.streakCount}</Badge>}
                 {getStreakStars(task.streakCount) > 0 && (
                   <Badge tone="xp">{'⭐'.repeat(getStreakStars(task.streakCount))}</Badge>
@@ -295,9 +294,9 @@ export default function TaskDetail() {
                   </span>
                   <div className="flex items-center gap-2">
                     <TaskStatusSelect status={child.status} onChange={(status) => setTaskStatus(child.id, status)} />
-                    {child.recurrenceIntervalDays !== null && (
-                      <Badge tone="muted">🔁 {formatRecurrence(child.recurrenceIntervalDays)}</Badge>
-                    )}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <TaskDueDateControl task={child} onUpdate={(patch) => updateTask(child.id, patch)} />
+                    </div>
                     {child.streakCount > 0 && <Badge tone="eternas">🔥 ×{child.streakCount}</Badge>}
                     {getStreakStars(child.streakCount) > 0 && (
                       <Badge tone="xp">{'⭐'.repeat(getStreakStars(child.streakCount))}</Badge>

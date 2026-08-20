@@ -22,6 +22,7 @@ export interface Task {
   createdAt: string;
   completedAt: string | null;
   focusDate: string | null;
+  dueDate: string | null;
   recurrenceIntervalDays: number | null;
   nextDueDate: string | null;
   streakCount: number;
