@@ -8,28 +8,38 @@ import ProjectModal from '../components/ProjectModal';
 import SprintToggleButton from '../components/SprintToggleButton';
 import ActiveStatusToggle from '../components/ActiveStatusToggle';
 import ProjectStatusSelect from '../components/ProjectStatusSelect';
+import ShowCompletedToggle from '../components/ShowCompletedToggle';
 
 export default function Projects() {
   const { projects, addProject, toggleSprint, toggleActive, moveProjectPriority, setProjectStatus } = useProjects();
   const { tasks } = useTasks();
   const [modalOpen, setModalOpen] = useState(false);
+  const [showDone, setShowDone] = useState(false);
+
+  const activeProjects = projects.filter((p) => p.status !== 'done');
+  const doneProjects = projects
+    .filter((p) => p.status === 'done')
+    .sort((a, b) => new Date(b.completedAt ?? 0).getTime() - new Date(a.completedAt ?? 0).getTime());
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-text-primary">Проекты</h1>
-        <Button variant="primary" onClick={() => setModalOpen(true)}>
-          + Новый проект
-        </Button>
+        <div className="flex items-center gap-2">
+          <ShowCompletedToggle show={showDone} onClick={() => setShowDone((prev) => !prev)} />
+          <Button variant="primary" onClick={() => setModalOpen(true)}>
+            + Новый проект
+          </Button>
+        </div>
       </div>
 
-      {projects.length === 0 ? (
+      {activeProjects.length === 0 ? (
         <div className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
-          Проектов пока нет
+          {projects.length === 0 ? 'Проектов пока нет' : 'Активных проектов нет'}
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {projects.map((project, index) => {
+          {activeProjects.map((project, index) => {
             const projectTasks = tasks.filter((t) => t.projectId === project.id && t.status !== 'cancelled');
             const done = projectTasks.filter((t) => t.status === 'done').length;
             const total = projectTasks.length;
@@ -45,7 +55,7 @@ export default function Projects() {
                   project.isActive
                     ? 'border-accent-eternas/50 bg-accent-eternas/[0.04]'
                     : 'border-border bg-surface'
-                }`}
+                } ${project.isSprint ? 'ring-2 ring-accent-xp/60' : ''}`}
               >
                 <div
                   className="flex flex-col items-center gap-1 pt-0.5"
@@ -65,7 +75,7 @@ export default function Projects() {
                     </Button>
                     <Button
                       variant="ghost"
-                      disabled={index === projects.length - 1}
+                      disabled={index === activeProjects.length - 1}
                       onClick={() => moveProjectPriority(project.id, 'down')}
                     >
                       ▼
@@ -116,6 +126,56 @@ export default function Projects() {
               </Link>
             );
           })}
+        </div>
+      )}
+
+      {showDone && (
+        <div className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold text-text-primary">Завершённые проекты</h2>
+          {doneProjects.length === 0 ? (
+            <div className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+              Пока ничего не завершено
+            </div>
+          ) : (
+            doneProjects.map((project) => {
+              const projectTasks = tasks.filter((t) => t.projectId === project.id && t.status !== 'cancelled');
+              const done = projectTasks.filter((t) => t.status === 'done').length;
+              const total = projectTasks.length;
+              const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+
+              return (
+                <Link
+                  key={project.id}
+                  to={`/projects/${project.id}`}
+                  className="flex gap-4 rounded-lg border border-border bg-surface p-4 opacity-70 transition-colors hover:bg-overlay/[0.04] hover:opacity-100"
+                >
+                  <div className="flex flex-1 flex-col gap-3">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="font-semibold text-text-muted line-through">{project.title}</div>
+                        <ProjectStatusSelect
+                          status={project.status}
+                          onChange={(status) => setProjectStatus(project.id, status)}
+                        />
+                      </div>
+                      {project.completedAt && (
+                        <div className="mt-1 text-xs text-text-muted">
+                          Завершён {new Date(project.completedAt).toLocaleDateString('ru-RU')}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="mb-1 text-sm text-text-muted tabular-nums">
+                        {done} / {total} задач
+                      </div>
+                      <ProgressBar percent={percent} />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })
+          )}
         </div>
       )}
 

@@ -23,6 +23,7 @@ export interface NewTaskInput {
   dueDate: string | null;
   recurrenceIntervalDays: number | null;
   trackLinks: TrackLink[];
+  boardColumnId: string | null;
 }
 
 function normalizeTask(t: Task): Task {
@@ -33,6 +34,7 @@ function normalizeTask(t: Task): Task {
     nextDueDate: t.nextDueDate ?? null,
     streakCount: t.streakCount ?? 0,
     trackLinks: t.trackLinks ?? [],
+    boardColumnId: t.boardColumnId ?? null,
   };
 }
 
@@ -77,6 +79,7 @@ export function useTasks(): {
       nextDueDate: input.recurrenceIntervalDays !== null ? today : null,
       streakCount: 0,
       trackLinks: input.trackLinks,
+      boardColumnId: input.boardColumnId,
     };
     setTasks((prev) => [...prev, task]);
   }

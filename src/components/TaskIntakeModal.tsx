@@ -115,6 +115,7 @@ export default function TaskIntakeModal({ open, onClose }: TaskIntakeModalProps)
         dueDate: null,
         recurrenceIntervalDays: null,
         trackLinks: d.trackId && d.stageId ? [{ trackId: d.trackId, stageId: d.stageId }] : [],
+        boardColumnId: null,
       });
     }
     pushToast(`Создано задач: ${drafts.length}`);

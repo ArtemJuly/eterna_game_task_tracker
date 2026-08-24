@@ -27,9 +27,15 @@ export interface Task {
   nextDueDate: string | null;
   streakCount: number;
   trackLinks: TrackLink[];
+  boardColumnId: string | null;
 }
 
 export type ProjectStatus = 'active' | 'done';
+
+export interface BoardColumn {
+  id: string;
+  title: string;
+}
 
 export interface Project {
   id: string;
@@ -44,6 +50,8 @@ export interface Project {
   isSprint: boolean;
   isActive: boolean;
   priority: number;
+  boardColumns: BoardColumn[];
+  showCompletedTasks: boolean;
 }
 
 export type RewardStatus = 'wanted' | 'saving' | 'available' | 'purchased' | 'cancelled';
@@ -56,6 +64,7 @@ export interface Reward {
   status: RewardStatus;
   createdAt: string;
   purchasedAt: string | null;
+  isEternal: boolean;
 }
 
 export type HistoryType = 'task_done' | 'reward_purchased' | 'task_cancelled' | 'project_done' | 'pomodoro_completed';
@@ -128,6 +137,26 @@ export interface Track {
   priority: number;
 }
 
+export interface DayPlanItem {
+  taskId: string;
+  reason: string;
+}
+
+export interface DayPlan {
+  date: string;
+  items: DayPlanItem[];
+}
+
+export interface SprintItem {
+  taskId: string;
+  reason: string;
+}
+
+export interface WeekSprint {
+  weekStart: string;
+  items: SprintItem[];
+}
+
 export type GoalNodeType = 'goal' | 'project' | 'track' | 'trackStage' | 'task';
 
 export interface GoalNode {
@@ -140,4 +169,7 @@ export interface GoalNode {
   stageId: string | null;
   taskId: string | null;
   createdAt: string;
+  pinnedAt: string | null;
+  completedAt: string | null;
+  isActive: boolean;
 }

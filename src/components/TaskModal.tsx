@@ -35,6 +35,7 @@ interface TaskModalProps {
   initialTask?: Task | null;
   defaultProjectId?: string | null;
   defaultParentTaskId?: string | null;
+  defaultBoardColumnId?: string | null;
 }
 
 export default function TaskModal({
@@ -44,6 +45,7 @@ export default function TaskModal({
   initialTask,
   defaultProjectId,
   defaultParentTaskId,
+  defaultBoardColumnId,
 }: TaskModalProps) {
   const { projects } = useProjects();
   const { tasks } = useTasks();
@@ -57,6 +59,7 @@ export default function TaskModal({
   const [eternas, setEternas] = useState(5);
   const [status, setStatus] = useState<TaskStatus>('planned');
   const [dueDate, setDueDate] = useState<string | null>(null);
+  const [boardColumnId, setBoardColumnId] = useState<string | null>(null);
   const [recurrenceMode, setRecurrenceMode] = useState('none');
   const [customDays, setCustomDays] = useState(3);
   const [trackLinks, setTrackLinks] = useState<TrackLink[]>([]);
@@ -76,6 +79,7 @@ export default function TaskModal({
     setEternas(initialTask?.eternas ?? 5);
     setStatus(initialTask?.status ?? 'planned');
     setDueDate(initialTask?.dueDate ?? null);
+    setBoardColumnId(initialTask?.boardColumnId ?? defaultBoardColumnId ?? null);
     const intervalDays = initialTask?.recurrenceIntervalDays ?? null;
     setRecurrenceMode(modeForInterval(intervalDays));
     if (intervalDays !== null && !PRESET_DAYS.includes(intervalDays)) setCustomDays(intervalDays);
@@ -84,7 +88,7 @@ export default function TaskModal({
     setPickerStageId('');
     setTrackPickerOpen(false);
     setLastEstimate(null);
-  }, [open, initialTask, defaultProjectId, defaultParentTaskId]);
+  }, [open, initialTask, defaultProjectId, defaultParentTaskId, defaultBoardColumnId]);
 
   const availableTracks = tracks.filter((t) => !trackLinks.some((l) => l.trackId === t.id));
   const pickerStages = tracks.find((t) => t.id === pickerTrackId)?.stages ?? [];
@@ -191,6 +195,7 @@ export default function TaskModal({
       dueDate,
       recurrenceIntervalDays,
       trackLinks,
+      boardColumnId,
     });
     onClose();
   }

@@ -1,6 +1,7 @@
 import type {
   ActivePomodoro,
   Character,
+  DayPlan,
   GoalNode,
   HistoryEntry,
   PomodoroSession,
@@ -9,6 +10,7 @@ import type {
   Settings,
   Task,
   Track,
+  WeekSprint,
 } from '../types';
 import { STORAGE_KEYS } from '../utils/storage';
 import { createStore } from '../utils/store';
@@ -43,3 +45,7 @@ export const settingsStore = createStore<Settings>(STORAGE_KEYS.settings, {
 export const tracksStore = createStore<Track[]>(STORAGE_KEYS.tracks, []);
 
 export const goalNodesStore = createStore<GoalNode[]>(STORAGE_KEYS.goalNodes, []);
+
+export const dayPlanStore = createStore<DayPlan | null>(STORAGE_KEYS.dayPlan, null);
+
+export const weekSprintStore = createStore<WeekSprint | null>(STORAGE_KEYS.weekSprint, null);

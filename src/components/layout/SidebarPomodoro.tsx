@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { usePomodoros } from '../../hooks/usePomodoros';
 import { useTasks } from '../../hooks/useTasks';
@@ -19,6 +19,16 @@ export default function SidebarPomodoro() {
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, [isRunning]);
+
+  const endTime = isRunning && active?.endsAt ? new Date(active.endsAt).getTime() : null;
+
+  useEffect(() => {
+    if (!isRunning || endTime === null) return;
+    if (now >= endTime) {
+      completePomodoro();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [now, isRunning, endTime]);
 
   if (!active) {
     return (

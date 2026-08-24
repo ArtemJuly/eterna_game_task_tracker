@@ -28,6 +28,8 @@ export function seedIfEmpty(): void {
       isSprint: true,
       isActive: true,
       priority: 0,
+      boardColumns: [],
+      showCompletedTasks: false,
     },
     {
       id: projIdThesis,
@@ -42,6 +44,8 @@ export function seedIfEmpty(): void {
       isSprint: false,
       isActive: true,
       priority: 1,
+      boardColumns: [],
+      showCompletedTasks: false,
     },
     {
       id: projIdHealth,
@@ -56,6 +60,8 @@ export function seedIfEmpty(): void {
       isSprint: false,
       isActive: false,
       priority: 2,
+      boardColumns: [],
+      showCompletedTasks: false,
     },
   ];
 
@@ -110,6 +116,7 @@ export function seedIfEmpty(): void {
     nextDueDate: null,
     streakCount: 0,
     trackLinks: [],
+    boardColumnId: null,
   };
 
   const conceptTaskId = generateId();
@@ -133,6 +140,7 @@ export function seedIfEmpty(): void {
       nextDueDate: null,
       streakCount: 0,
       trackLinks: [],
+      boardColumnId: null,
     },
     {
       id: generateId(),
@@ -151,6 +159,7 @@ export function seedIfEmpty(): void {
       nextDueDate: null,
       streakCount: 0,
       trackLinks: [],
+      boardColumnId: null,
     },
     {
       id: generateId(),
@@ -169,6 +178,7 @@ export function seedIfEmpty(): void {
       nextDueDate: null,
       streakCount: 0,
       trackLinks: [],
+      boardColumnId: null,
     },
     {
       id: generateId(),
@@ -187,6 +197,7 @@ export function seedIfEmpty(): void {
       nextDueDate: null,
       streakCount: 0,
       trackLinks: [{ trackId: quantTrackId, stageId: mathStageId }],
+      boardColumnId: null,
     },
     {
       id: generateId(),
@@ -205,6 +216,7 @@ export function seedIfEmpty(): void {
       nextDueDate: todayStr,
       streakCount: 3,
       trackLinks: [],
+      boardColumnId: null,
     },
     {
       id: generateId(),
@@ -223,6 +235,7 @@ export function seedIfEmpty(): void {
       nextDueDate: null,
       streakCount: 0,
       trackLinks: [],
+      boardColumnId: null,
     },
     doneTask,
   ];
@@ -236,6 +249,7 @@ export function seedIfEmpty(): void {
       status: 'wanted',
       createdAt: iso(10),
       purchasedAt: null,
+      isEternal: true,
     },
     {
       id: generateId(),
@@ -245,6 +259,7 @@ export function seedIfEmpty(): void {
       status: 'saving',
       createdAt: iso(9),
       purchasedAt: null,
+      isEternal: false,
     },
     {
       id: generateId(),
@@ -254,6 +269,7 @@ export function seedIfEmpty(): void {
       status: 'wanted',
       createdAt: iso(8),
       purchasedAt: null,
+      isEternal: false,
     },
     {
       id: generateId(),
@@ -263,6 +279,7 @@ export function seedIfEmpty(): void {
       status: 'wanted',
       createdAt: iso(7),
       purchasedAt: null,
+      isEternal: false,
     },
     {
       id: generateId(),
@@ -272,6 +289,7 @@ export function seedIfEmpty(): void {
       status: 'wanted',
       createdAt: iso(6),
       purchasedAt: null,
+      isEternal: false,
     },
   ];
 

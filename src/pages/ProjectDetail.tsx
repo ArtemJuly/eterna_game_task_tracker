@@ -16,7 +16,9 @@ import PomodoroTimer from '../components/PomodoroTimer';
 import TodayFocusButton from '../components/TodayFocusButton';
 import SprintToggleButton from '../components/SprintToggleButton';
 import ActiveStatusToggle from '../components/ActiveStatusToggle';
+import ShowCompletedToggle from '../components/ShowCompletedToggle';
 import TaskStatusSelect from '../components/TaskStatusSelect';
+import TaskProjectSelect from '../components/TaskProjectSelect';
 import TaskDueDateControl from '../components/TaskDueDateControl';
 import ProjectStatusSelect from '../components/ProjectStatusSelect';
 import { getTodayDateString } from '../utils/today';
@@ -24,12 +26,21 @@ import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier } from '..
 import { getStreakStars, isTaskOverdue } from '../utils/recurrence';
 import { getProjectPomodoroStats } from '../utils/pomodoroStats';
 import { TASK_SORT_OPTIONS, compareTasks, type TaskSortMode } from '../utils/taskSort';
+import ProjectBoard from '../components/ProjectBoard';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { projects, updateProject, deleteProject, completeProject, setProjectStatus, toggleSprint, toggleActive } =
-    useProjects();
+  const {
+    projects,
+    updateProject,
+    deleteProject,
+    completeProject,
+    setProjectStatus,
+    toggleSprint,
+    toggleActive,
+    toggleShowCompletedTasks,
+  } = useProjects();
   const { tasks, addTask, updateTask, startTask, completeTask, cancelTask, setTaskStatus, deleteTask, toggleFocus } =
     useTasks();
   const { sessions } = usePomodoros();
@@ -38,6 +49,7 @@ export default function ProjectDetail() {
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [sortMode, setSortMode] = useState<TaskSortMode>('urgency');
+  const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
   const today = getTodayDateString();
 
   const foundProject = projects.find((p) => p.id === id);
@@ -65,8 +77,15 @@ export default function ProjectDetail() {
   const pomodoroStats = getProjectPomodoroStats(sessions, tasks, project.id);
 
   const topLevelTasks = projectTasks
-    .filter((t) => t.parentTaskId === null && t.status !== 'cancelled' && t.status !== 'done')
+    .filter(
+      (t) =>
+        t.parentTaskId === null && t.status !== 'cancelled' && (project.showCompletedTasks || t.status !== 'done'),
+    )
     .sort((a, b) => compareTasks(a, b, sortMode, today));
+
+  const boardTasks = projectTasks.filter(
+    (t) => t.parentTaskId === null && t.status !== 'cancelled' && (project.showCompletedTasks || t.status !== 'done'),
+  );
 
   function handleDeleteProject() {
     confirm({
@@ -132,7 +151,7 @@ export default function ProjectDetail() {
       <div
         className={`rounded-lg border p-5 ${
           project.isActive ? 'border-accent-eternas/50 bg-accent-eternas/[0.04]' : 'border-border bg-surface'
-        }`}
+        } ${project.isSprint ? 'ring-2 ring-accent-xp/60' : ''}`}
       >
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
@@ -149,7 +168,7 @@ export default function ProjectDetail() {
                 <div onClick={(e) => e.stopPropagation()}>
                   <ProjectStatusSelect status={project.status} onChange={(status) => setProjectStatus(project.id, status)} />
                 </div>
-                {project.isSprint && <Badge tone="eternas">🚀 Спринт ×1.2</Badge>}
+                {project.isSprint && <Badge tone="xp">🚀 Спринт ×1.2</Badge>}
                 {project.status !== 'done' && (
                   <ActiveStatusToggle active={project.isActive} onClick={() => toggleActive(project.id)} />
                 )}
@@ -199,23 +218,50 @@ export default function ProjectDetail() {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-text-primary">Задачи</h2>
         <div className="flex items-center gap-2">
-          <select
-            value={sortMode}
-            onChange={(e) => setSortMode(e.target.value as TaskSortMode)}
-            className="rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
-          >
-            {TASK_SORT_OPTIONS.map((o) => (
-              <option key={o.key} value={o.key}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+          <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewMode === 'list' ? 'bg-overlay/[0.06] text-text-primary' : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              Список
+            </button>
+            <button
+              onClick={() => setViewMode('board')}
+              className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewMode === 'board' ? 'bg-overlay/[0.06] text-text-primary' : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              Доска
+            </button>
+          </div>
+          {viewMode === 'list' && (
+            <select
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as TaskSortMode)}
+              className="rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+            >
+              {TASK_SORT_OPTIONS.map((o) => (
+                <option key={o.key} value={o.key}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          )}
+          <ShowCompletedToggle
+            show={project.showCompletedTasks}
+            onClick={() => toggleShowCompletedTasks(project.id)}
+          />
           <Button variant="primary" onClick={openCreateTask}>
             + Новая задача
           </Button>
         </div>
       </div>
 
+      {viewMode === 'board' ? (
+        <ProjectBoard project={project} tasks={boardTasks} projects={projects} />
+      ) : (
       <div className="flex flex-col gap-2">
         {topLevelTasks.length === 0 ? (
           <div className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
@@ -251,6 +297,11 @@ export default function ProjectDetail() {
                   </span>
                   <div className="flex items-center gap-2">
                     <TaskStatusSelect status={task.status} onChange={(status) => setTaskStatus(task.id, status)} />
+                    <TaskProjectSelect
+                      projectId={task.projectId}
+                      projects={projects}
+                      onChange={(projectId) => updateTask(task.id, { projectId })}
+                    />
                     <div onClick={(e) => e.stopPropagation()}>
                       <TaskDueDateControl task={task} onUpdate={(patch) => updateTask(task.id, patch)} />
                     </div>
@@ -308,6 +359,7 @@ export default function ProjectDetail() {
           })
         )}
       </div>
+      )}
 
       <ProjectModal
         open={editModalOpen}

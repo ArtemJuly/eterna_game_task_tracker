@@ -16,6 +16,7 @@ export default function RewardModal({ open, onClose, onSubmit, initialReward }: 
   const [costEternas, setCostEternas] = useState(50);
   const [costMoney, setCostMoney] = useState('');
   const [status, setStatus] = useState<RewardStatus>('wanted');
+  const [isEternal, setIsEternal] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -23,6 +24,7 @@ export default function RewardModal({ open, onClose, onSubmit, initialReward }: 
     setCostEternas(initialReward?.costEternas ?? 50);
     setCostMoney(initialReward?.costMoney != null ? String(initialReward.costMoney) : '');
     setStatus(initialReward?.status ?? 'wanted');
+    setIsEternal(initialReward?.isEternal ?? false);
   }, [open, initialReward]);
 
   function handleSubmit(e: React.FormEvent) {
@@ -33,6 +35,7 @@ export default function RewardModal({ open, onClose, onSubmit, initialReward }: 
       costEternas,
       costMoney: costMoney ? Number(costMoney) : null,
       status,
+      isEternal,
     });
     onClose();
   }
@@ -86,6 +89,16 @@ export default function RewardModal({ open, onClose, onSubmit, initialReward }: 
             <option value="saving">Коплю</option>
           </select>
         </div>
+
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-text-primary">
+          <input
+            type="checkbox"
+            checked={isEternal}
+            onChange={(e) => setIsEternal(e.target.checked)}
+            className="h-4 w-4 accent-accent-xp"
+          />
+          ♾ Вечная награда — не пропадает после получения, можно покупать снова
+        </label>
 
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

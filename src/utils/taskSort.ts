@@ -51,9 +51,20 @@ function compareByMode(a: Task, b: Task, mode: TaskSortMode, today: string): num
   return byCreatedAtDesc(a, b);
 }
 
-export function compareTasks(a: Task, b: Task, mode: TaskSortMode, today: string): number {
+export function compareTasks(
+  a: Task,
+  b: Task,
+  mode: TaskSortMode,
+  today: string,
+  dayPlanTaskIds: Set<string> = new Set(),
+): number {
   const aFocused = a.focusDate === today ? 1 : 0;
   const bFocused = b.focusDate === today ? 1 : 0;
   if (aFocused !== bFocused) return bFocused - aFocused;
+
+  const aInPlan = dayPlanTaskIds.has(a.id) ? 1 : 0;
+  const bInPlan = dayPlanTaskIds.has(b.id) ? 1 : 0;
+  if (aInPlan !== bInPlan) return bInPlan - aInPlan;
+
   return compareByMode(a, b, mode, today);
 }

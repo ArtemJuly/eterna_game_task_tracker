@@ -9,6 +9,8 @@ export const STORAGE_KEYS = {
   settings: 'eterna_settings',
   tracks: 'eterna_tracks',
   goalNodes: 'eterna_goal_nodes',
+  dayPlan: 'eterna_day_plan',
+  weekSprint: 'eterna_week_sprint',
 } as const;
 
 export function readStorage<T>(key: string, fallback: T): T {

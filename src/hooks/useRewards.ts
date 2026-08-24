@@ -8,6 +8,14 @@ export interface NewRewardInput {
   costEternas: number;
   costMoney: number | null;
   status: RewardStatus;
+  isEternal: boolean;
+}
+
+function normalizeReward(r: Reward): Reward {
+  return {
+    ...r,
+    isEternal: r.isEternal ?? false,
+  };
 }
 
 export function useRewards(): {
@@ -17,7 +25,8 @@ export function useRewards(): {
   deleteReward: (id: string) => void;
   purchaseReward: (id: string) => void;
 } {
-  const [rewards, setRewards] = rewardsStore.useStore();
+  const [rawRewards, setRewards] = rewardsStore.useStore();
+  const rewards = rawRewards.map(normalizeReward);
 
   function addReward(input: NewRewardInput) {
     const reward: Reward = {
@@ -28,6 +37,7 @@ export function useRewards(): {
       status: input.status,
       createdAt: new Date().toISOString(),
       purchasedAt: null,
+      isEternal: input.isEternal,
     };
     setRewards((prev) => [...prev, reward]);
   }
@@ -53,7 +63,9 @@ export function useRewards(): {
     const purchasedAt = new Date().toISOString();
     characterStore.set((prev) => ({ ...prev, eternas: prev.eternas - reward.costEternas }));
     setRewards((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: 'purchased', purchasedAt } : r)),
+      prev.map((r) =>
+        r.id === id ? (reward.isEternal ? { ...r, purchasedAt } : { ...r, status: 'purchased', purchasedAt }) : r,
+      ),
     );
 
     historyStore.set((prev) => [

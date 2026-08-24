@@ -11,6 +11,8 @@ import type { GoalNode } from '../types';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import GoalNodeModal from '../components/GoalNodeModal';
+import TopPriorityToggle from '../components/TopPriorityToggle';
+import ActiveStatusToggle from '../components/ActiveStatusToggle';
 import { getStageStats } from '../utils/trackStats';
 
 const TYPE_ICON: Record<GoalNode['type'], string> = {
@@ -29,6 +31,16 @@ const TYPE_TONE: Record<GoalNode['type'], 'default' | 'xp' | 'eternas'> = {
   task: 'default',
 };
 
+function getAncestorIds(nodeId: string, allNodes: GoalNode[]): string[] {
+  const ids: string[] = [];
+  let current = allNodes.find((n) => n.id === nodeId);
+  while (current && current.parentId !== null) {
+    ids.push(current.parentId);
+    current = allNodes.find((n) => n.id === current!.parentId);
+  }
+  return ids;
+}
+
 type ColorVariant = 'gold' | 'green' | 'gray' | null;
 
 const HIGHLIGHT_CLASSES: Record<'gold' | 'green' | 'gray', string> = {
@@ -46,7 +58,7 @@ interface ResolvedNode {
 }
 
 export default function GoalMap() {
-  const { nodes, addNode, renameNode, deleteNode } = useGoalMap();
+  const { nodes, addNode, renameNode, deleteNode, togglePin, toggleNodeDone, toggleNodeActive } = useGoalMap();
   const { projects } = useProjects();
   const { tracks } = useTracks();
   const { tasks } = useTasks();
@@ -56,12 +68,36 @@ export default function GoalMap() {
   const [modalParentId, setModalParentId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [collapseOverrides, setCollapseOverrides] = useState<Set<string>>(new Set());
 
-  const roots = nodes.filter((n) => n.parentId === null);
+  const pinnedOrdered = [...nodes]
+    .filter((n) => n.pinnedAt !== null)
+    .sort((a, b) => new Date(a.pinnedAt!).getTime() - new Date(b.pinnedAt!).getTime());
+
+  const forceOpenIds = (() => {
+    const set = new Set<string>();
+    for (const p of nodes.filter((n) => n.pinnedAt !== null)) {
+      set.add(p.id);
+      getAncestorIds(p.id, nodes).forEach((id) => set.add(id));
+    }
+    return set;
+  })();
 
   function resolveNode(node: GoalNode): ResolvedNode {
     if (node.type === 'goal') {
-      return { label: node.title || 'Без названия', linkTo: null, priorityRank: null, colorVariant: null, statusBadge: null };
+      const isDone = node.completedAt !== null;
+      const isActive = node.isActive ?? true;
+      return {
+        label: node.title || 'Без названия',
+        linkTo: null,
+        priorityRank: null,
+        colorVariant: isDone || !isActive ? 'gray' : null,
+        statusBadge: isDone
+          ? { text: '✓ Выполнено', tone: 'success' }
+          : !isActive
+            ? { text: '💤 Неактивна', tone: 'muted' }
+            : null,
+      };
     }
     if (node.type === 'project') {
       const project = projects.find((p) => p.id === node.projectId);
@@ -114,6 +150,41 @@ export default function GoalMap() {
       statusBadge: isActiveTask ? { text: '⚡ Активна', tone: 'eternas' } : null,
     };
   }
+
+  function sortNodes(list: GoalNode[]): GoalNode[] {
+    function weight(n: GoalNode): number {
+      if (n.pinnedAt !== null) return 0;
+      if (forceOpenIds.has(n.id)) return 0.5;
+      const { colorVariant } = resolveNode(n);
+      if (colorVariant === 'gold') return 1;
+      if (colorVariant === 'green') return 2;
+      if (colorVariant === 'gray') return 4;
+      return 3;
+    }
+    return [...list].sort((a, b) => {
+      const wa = weight(a);
+      const wb = weight(b);
+      if (wa !== wb) return wa - wb;
+      if (a.pinnedAt !== null && b.pinnedAt !== null) {
+        return new Date(a.pinnedAt).getTime() - new Date(b.pinnedAt).getTime();
+      }
+      const ra = resolveNode(a).priorityRank;
+      const rb = resolveNode(b).priorityRank;
+      if (ra !== null && rb !== null && ra !== rb) return ra - rb;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+  }
+
+  function toggleExpanded(id: string) {
+    setCollapseOverrides((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const roots = sortNodes(nodes.filter((n) => n.parentId === null));
 
   function getOwnCompletedCount(node: GoalNode): number {
     if (node.type === 'project') {
@@ -182,20 +253,39 @@ export default function GoalMap() {
   }
 
   function renderNode(node: GoalNode) {
-    const children = nodes.filter((n) => n.parentId === node.id);
+    const children = sortNodes(nodes.filter((n) => n.parentId === node.id));
     const { label, linkTo, priorityRank, colorVariant, statusBadge } = resolveNode(node);
     const isRenaming = renamingId === node.id;
     const isTopPriority = priorityRank === 1;
     const completedCount = getTotalCompletedCount(node);
+    const isPinned = node.pinnedAt !== null;
+    const isAncestorOfPinned = !isPinned && forceOpenIds.has(node.id);
+    const pinnedRank = isPinned ? pinnedOrdered.findIndex((n) => n.id === node.id) + 1 : null;
+    const defaultExpanded = colorVariant !== 'gray' || forceOpenIds.has(node.id);
+    const isExpanded = collapseOverrides.has(node.id) ? !defaultExpanded : defaultExpanded;
+    const isDoneGoal = node.type === 'goal' && node.completedAt !== null;
+    const isGoalActive = node.isActive ?? true;
 
     return (
       <li key={node.id}>
         <div
           className={`inline-flex flex-wrap items-center gap-2 rounded-lg border px-3 py-1.5 ${
             colorVariant ? HIGHLIGHT_CLASSES[colorVariant] : 'border-border bg-surface'
-          }`}
+          } ${isPinned ? 'ring-2 ring-accent-xp/60' : isAncestorOfPinned ? 'ring-1 ring-accent-xp/30' : ''}`}
         >
+          {children.length > 0 && (
+            <button
+              type="button"
+              onClick={() => toggleExpanded(node.id)}
+              className="text-text-muted hover:text-text-primary"
+              title={isExpanded ? 'Свернуть' : 'Развернуть'}
+            >
+              {isExpanded ? '▾' : '▸'}
+            </button>
+          )}
           <Badge tone={TYPE_TONE[node.type]}>{TYPE_ICON[node.type]}</Badge>
+          {pinnedRank !== null && <Badge tone="xp">🎯 Топ #{pinnedRank}</Badge>}
+          {isAncestorOfPinned && <Badge tone="xp">🎯 путь к топ-3</Badge>}
           {isTopPriority && <Badge tone="eternas">🏆 Приоритет #1</Badge>}
           {!isTopPriority && priorityRank !== null && <Badge tone="muted">#{priorityRank}</Badge>}
           {statusBadge && <Badge tone={statusBadge.tone}>{statusBadge.text}</Badge>}
@@ -213,22 +303,35 @@ export default function GoalMap() {
               {label}
             </Link>
           ) : (
-            <span className="text-sm font-medium text-text-primary">{label}</span>
+            <span
+              className={`text-sm font-medium ${isDoneGoal ? 'text-text-muted line-through' : 'text-text-primary'}`}
+            >
+              {label}
+            </span>
           )}
           {completedCount > 0 && <Badge tone="success">✓ {completedCount}</Badge>}
+          <TopPriorityToggle active={isPinned} onClick={() => togglePin(node.id)} />
           <Button variant="ghost" onClick={() => openAddModal(node.id)}>
             + Добавить
           </Button>
           {node.type === 'goal' && (
-            <Button variant="ghost" onClick={() => startRename(node)}>
-              Переименовать
-            </Button>
+            <>
+              <Button variant="ghost" onClick={() => toggleNodeDone(node.id)}>
+                {isDoneGoal ? 'Вернуть' : 'Выполнить'}
+              </Button>
+              {!isDoneGoal && (
+                <ActiveStatusToggle active={isGoalActive} onClick={() => toggleNodeActive(node.id)} />
+              )}
+              <Button variant="ghost" onClick={() => startRename(node)}>
+                Переименовать
+              </Button>
+            </>
           )}
           <Button variant="ghost" onClick={() => handleDelete(node)}>
             Удалить
           </Button>
         </div>
-        {children.length > 0 && <ul>{children.map((child) => renderNode(child))}</ul>}
+        {children.length > 0 && isExpanded && <ul>{children.map((child) => renderNode(child))}</ul>}
       </li>
     );
   }
@@ -243,7 +346,8 @@ export default function GoalMap() {
       </div>
       <p className="text-sm text-text-muted">
         Постройте дерево от глобальной цели к конкретным шагам — трекам, проектам или пока ещё ничем не подкреплённым
-        идеям.
+        идеям. Отметьте до 3 самых важных направлений кнопкой «🎯 В топ-3» — они поднимутся наверх и останутся
+        развёрнутыми, а неактивные ветки свернутся сами.
       </p>
 
       {roots.length === 0 ? (

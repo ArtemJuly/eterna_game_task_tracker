@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCharacter } from '../hooks/useCharacter';
 import { useTasks } from '../hooks/useTasks';
@@ -6,6 +7,7 @@ import { useTracks } from '../hooks/useTracks';
 import { useGoalMap } from '../hooks/useGoalMap';
 import { useHistory } from '../hooks/useHistory';
 import { usePomodoros } from '../hooks/usePomodoros';
+import { useDayPlan } from '../hooks/useDayPlan';
 import { getLevelProgress } from '../utils/levels';
 import { formatStageLevel, getStageLevelProgress } from '../utils/trackLevels';
 import { useXpPulse } from '../hooks/useXpPulse';
@@ -19,6 +21,8 @@ import TodayFocusButton from '../components/TodayFocusButton';
 import { getTodayDateString } from '../utils/today';
 import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier } from '../utils/taskRewards';
 import { formatRecurrence, getStreakStars, isTaskOverdue } from '../utils/recurrence';
+import { findEnclosingGoalTitle } from '../utils/goalMap';
+import { compareTasks } from '../utils/taskSort';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -30,6 +34,9 @@ export default function Dashboard() {
   const { nodes } = useGoalMap();
   const history = useHistory();
   const { sessions } = usePomodoros();
+  const { todayPlan } = useDayPlan();
+  const planReasonByTaskId = useMemo(() => new Map(todayPlan.map((item) => [item.taskId, item.reason])), [todayPlan]);
+  const dayPlanTaskIds = useMemo(() => new Set(todayPlan.map((item) => item.taskId)), [todayPlan]);
   const pulseTs = useXpPulse();
 
   const { level, next, xpIntoLevel, xpForLevel, percent } = getLevelProgress(character.totalXp);
@@ -44,17 +51,7 @@ export default function Dashboard() {
   const priorityProjectNode = topPriorityProject
     ? nodes.find((n) => n.type === 'project' && n.projectId === topPriorityProject.id)
     : undefined;
-  let enclosingGoalTitle: string | null = null;
-  if (priorityProjectNode) {
-    let current = nodes.find((n) => n.id === priorityProjectNode.parentId);
-    while (current) {
-      if (current.type === 'goal') {
-        enclosingGoalTitle = current.title;
-        break;
-      }
-      current = nodes.find((n) => n.id === current!.parentId);
-    }
-  }
+  const enclosingGoalTitle = findEnclosingGoalTitle(nodes, priorityProjectNode);
 
   const taskCompletionSeries = buildTaskCompletionSeries(history, 14);
   const taskCompletionTotal = taskCompletionSeries.reduce((sum, p) => sum + p.value, 0);
@@ -81,15 +78,13 @@ export default function Dashboard() {
       return { project: p, done, total: projectTasks.length };
     });
 
-  const upcomingTasks = tasks
+  const todayTasks = tasks
     .filter((t) => t.status === 'planned' || t.status === 'in_progress')
-    .sort((a, b) => {
-      const aFocused = a.focusDate === today ? 1 : 0;
-      const bFocused = b.focusDate === today ? 1 : 0;
-      if (aFocused !== bFocused) return bFocused - aFocused;
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    .filter((t) => {
+      const effectiveDue = t.dueDate ?? (t.recurrenceIntervalDays !== null ? t.nextDueDate : null);
+      return t.focusDate === today || effectiveDue === today || dayPlanTaskIds.has(t.id);
     })
-    .slice(0, 5);
+    .sort((a, b) => compareTasks(a, b, 'urgency', today, dayPlanTaskIds));
 
   return (
     <div className="flex flex-col gap-8">
@@ -245,26 +240,31 @@ export default function Dashboard() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold text-text-primary">Ближайшие задачи</h2>
-        {upcomingTasks.length === 0 ? (
+        <h2 className="mb-3 text-lg font-semibold text-text-primary">Задачи на сегодня</h2>
+        {todayTasks.length === 0 ? (
           <div className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
-            Нет запланированных задач
+            На сегодня ничего не запланировано
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {upcomingTasks.map((task) => {
+            {todayTasks.map((task) => {
               const project = projects.find((p) => p.id === task.projectId);
               const parentTask = task.parentTaskId ? tasks.find((t) => t.id === task.parentTaskId) : undefined;
               const isFocused = task.focusDate === today;
+              const dayPlanReason = planReasonByTaskId.get(task.id);
+              const isInDayPlan = dayPlanReason !== undefined;
               const rewardMultiplier = getTaskRewardMultiplier(task, projects, today);
               const multiplierIcon = getMultiplierIcon(task, projects, today);
+              const rowTone = isFocused
+                ? 'border-accent-xp/50 bg-accent-xp/[0.04]'
+                : isInDayPlan
+                  ? 'border-accent-eternas/40 bg-accent-eternas/[0.03]'
+                  : 'border-border bg-surface';
               return (
                 <div
                   key={task.id}
                   onClick={() => navigate(`/tasks/${task.id}`)}
-                  className={`group flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-overlay/[0.03] ${
-                    isFocused ? 'border-accent-xp/50 bg-accent-xp/[0.04]' : 'border-border bg-surface'
-                  }`}
+                  className={`group flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-overlay/[0.03] ${rowTone}`}
                 >
                   <div onClick={(e) => e.stopPropagation()}>
                     <TodayFocusButton active={isFocused} onClick={() => toggleFocus(task.id)} />
@@ -274,6 +274,11 @@ export default function Dashboard() {
                     <div className="mt-1 flex items-center gap-2 text-sm text-text-muted">
                       {project && <span>{project.title}</span>}
                       {parentTask && <Badge tone="muted">↳ {parentTask.title}</Badge>}
+                      {isInDayPlan && (
+                        <span title={dayPlanReason}>
+                          <Badge tone="eternas">🤖 План дня</Badge>
+                        </span>
+                      )}
                       {task.recurrenceIntervalDays !== null && (
                         <Badge tone="muted">🔁 {formatRecurrence(task.recurrenceIntervalDays)}</Badge>
                       )}

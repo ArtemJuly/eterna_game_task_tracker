@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useCharacter } from '../hooks/useCharacter';
 import { useRewards } from '../hooks/useRewards';
+import type { NewRewardInput } from '../hooks/useRewards';
 import { useConfirm } from '../hooks/useConfirm';
 import type { Reward, RewardStatus } from '../types';
 import Button from '../components/ui/Button';
@@ -38,7 +39,10 @@ function RewardCard({ reward, eternas, onPurchase, onEdit, onDelete }: RewardCar
         >
           {reward.title}
         </button>
-        <Badge tone="muted">{STATUS_LABEL[reward.status]}</Badge>
+        <div className="flex items-center gap-1.5">
+          {reward.isEternal && <Badge tone="eternas">♾ Вечная</Badge>}
+          <Badge tone="muted">{STATUS_LABEL[reward.status]}</Badge>
+        </div>
       </div>
 
       <div className="text-sm tabular-nums">
@@ -54,6 +58,11 @@ function RewardCard({ reward, eternas, onPurchase, onEdit, onDelete }: RewardCar
             </div>
             <ProgressBar percent={percent} />
           </div>
+          {reward.isEternal && reward.purchasedAt && (
+            <div className="text-xs text-text-muted">
+              Последний раз: {new Date(reward.purchasedAt).toLocaleDateString('ru-RU')}
+            </div>
+          )}
           <div className="flex gap-2">
             <Button variant="primary" disabled={!affordable} onClick={onPurchase} className="flex-1">
               Получить
@@ -101,7 +110,7 @@ export default function Rewards() {
     setModalOpen(true);
   }
 
-  function handleSubmit(input: { title: string; costEternas: number; costMoney: number | null; status: RewardStatus }) {
+  function handleSubmit(input: NewRewardInput) {
     if (editingReward) {
       updateReward(editingReward.id, input);
     } else {

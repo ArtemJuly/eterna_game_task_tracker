@@ -1,5 +1,5 @@
 import { characterStore, goalNodesStore, historyStore, projectsStore, tasksStore, tracksStore } from './stores';
-import type { Project, ProjectStatus } from '../types';
+import type { BoardColumn, Project, ProjectStatus } from '../types';
 import { generateId } from '../utils/ids';
 import { pushToast } from './useToast';
 import { triggerXpPulse } from './useXpPulse';
@@ -26,6 +26,8 @@ function normalizeProject(p: Project, fallbackPriority: number): Project {
     isSprint: p.isSprint ?? false,
     isActive: p.isActive ?? true,
     priority: p.priority ?? fallbackPriority,
+    boardColumns: p.boardColumns ?? [],
+    showCompletedTasks: p.showCompletedTasks ?? false,
   };
 }
 
@@ -39,6 +41,10 @@ export function useProjects(): {
   toggleSprint: (id: string) => void;
   toggleActive: (id: string) => void;
   moveProjectPriority: (id: string, direction: 'up' | 'down') => void;
+  toggleShowCompletedTasks: (id: string) => void;
+  addBoardColumn: (projectId: string, title: string) => void;
+  renameBoardColumn: (projectId: string, columnId: string, title: string) => void;
+  deleteBoardColumn: (projectId: string, columnId: string) => void;
 } {
   const [rawProjects, setProjects] = projectsStore.useStore();
   const projects = rawProjects
@@ -66,6 +72,8 @@ export function useProjects(): {
       isSprint: false,
       isActive,
       priority,
+      boardColumns: [],
+      showCompletedTasks: false,
     };
     setProjects((prev) => [...prev, project]);
   }
@@ -171,6 +179,40 @@ export function useProjects(): {
     setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, isActive: true } : p)));
   }
 
+  function toggleShowCompletedTasks(id: string) {
+    setProjects((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, showCompletedTasks: !(p.showCompletedTasks ?? false) } : p)),
+    );
+  }
+
+  function addBoardColumn(projectId: string, title: string) {
+    const column: BoardColumn = { id: generateId(), title };
+    setProjects((prev) =>
+      prev.map((p) => (p.id === projectId ? { ...p, boardColumns: [...(p.boardColumns ?? []), column] } : p)),
+    );
+  }
+
+  function renameBoardColumn(projectId: string, columnId: string, title: string) {
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === projectId
+          ? { ...p, boardColumns: (p.boardColumns ?? []).map((c) => (c.id === columnId ? { ...c, title } : c)) }
+          : p,
+      ),
+    );
+  }
+
+  function deleteBoardColumn(projectId: string, columnId: string) {
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === projectId ? { ...p, boardColumns: (p.boardColumns ?? []).filter((c) => c.id !== columnId) } : p,
+      ),
+    );
+    tasksStore.set((prev) =>
+      prev.map((t) => (t.boardColumnId === columnId ? { ...t, boardColumnId: null } : t)),
+    );
+  }
+
   function moveProjectPriority(id: string, direction: 'up' | 'down') {
     const idx = projects.findIndex((p) => p.id === id);
     const swapWith = direction === 'up' ? idx - 1 : idx + 1;
@@ -197,5 +239,9 @@ export function useProjects(): {
     toggleSprint,
     toggleActive,
     moveProjectPriority,
+    toggleShowCompletedTasks,
+    addBoardColumn,
+    renameBoardColumn,
+    deleteBoardColumn,
   };
 }

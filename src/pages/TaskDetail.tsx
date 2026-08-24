@@ -14,6 +14,7 @@ import PomodoroTimer from '../components/PomodoroTimer';
 import TodayFocusButton from '../components/TodayFocusButton';
 import TaskModal from '../components/TaskModal';
 import TaskStatusSelect from '../components/TaskStatusSelect';
+import TaskProjectSelect from '../components/TaskProjectSelect';
 import TaskDueDateControl from '../components/TaskDueDateControl';
 import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier } from '../utils/taskRewards';
 import { getStreakStars, isTaskOverdue } from '../utils/recurrence';
@@ -181,7 +182,11 @@ export default function TaskDetail() {
                 <TaskStatusSelect status={task.status} onChange={(status) => setTaskStatus(task.id, status)} />
               </div>
               <div className="mt-2 flex items-center gap-2">
-                {project && <Badge tone="default">{project.title}</Badge>}
+                <TaskProjectSelect
+                  projectId={task.projectId}
+                  projects={projects}
+                  onChange={(projectId) => updateTask(task.id, { projectId })}
+                />
                 <TaskDueDateControl task={task} onUpdate={(patch) => updateTask(task.id, patch)} />
                 {task.streakCount > 0 && <Badge tone="eternas">🔥 ×{task.streakCount}</Badge>}
                 {getStreakStars(task.streakCount) > 0 && (
@@ -294,6 +299,11 @@ export default function TaskDetail() {
                   </span>
                   <div className="flex items-center gap-2">
                     <TaskStatusSelect status={child.status} onChange={(status) => setTaskStatus(child.id, status)} />
+                    <TaskProjectSelect
+                      projectId={child.projectId}
+                      projects={projects}
+                      onChange={(projectId) => updateTask(child.id, { projectId })}
+                    />
                     <div onClick={(e) => e.stopPropagation()}>
                       <TaskDueDateControl task={child} onUpdate={(patch) => updateTask(child.id, patch)} />
                     </div>
