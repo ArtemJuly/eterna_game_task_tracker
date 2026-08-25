@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSettings } from '../hooks/useSettings';
 import { useConfirm } from '../hooks/useConfirm';
 import {
@@ -11,6 +11,7 @@ import {
   tasksStore,
 } from '../hooks/stores';
 import { pushToast } from '../hooks/useToast';
+import { applyBackup, exportBackup, parseBackupFile } from '../utils/backup';
 import Button from '../components/ui/Button';
 import type { ThemeName } from '../types';
 
@@ -32,6 +33,7 @@ export default function Settings() {
     setAiApiKey,
   } = useSettings();
   const { confirm, dialog } = useConfirm();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [durationInput, setDurationInput] = useState(String(settings.pomodoroDurationMinutes));
   const [bonusXpInput, setBonusXpInput] = useState(String(settings.pomodoroBonusXp));
   const [bonusEternasInput, setBonusEternasInput] = useState(String(settings.pomodoroBonusEternas));
@@ -71,6 +73,43 @@ export default function Settings() {
 
   function handleAiApiKeyBlur() {
     setAiApiKey(aiApiKeyInput.trim());
+  }
+
+  function handleExport() {
+    exportBackup();
+    pushToast('Бэкап скачан', 'success');
+  }
+
+  function handleImportClick() {
+    fileInputRef.current?.click();
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      let data: Record<string, unknown>;
+      try {
+        data = parseBackupFile(String(reader.result));
+      } catch (err) {
+        pushToast(err instanceof Error ? err.message : 'Не удалось прочитать файл', 'error');
+        return;
+      }
+      confirm({
+        title: 'Восстановить из бэкапа?',
+        message: 'Все текущие данные приложения будут заменены содержимым файла. Это нельзя отменить.',
+        confirmLabel: 'Да, восстановить',
+        danger: true,
+        onConfirm: () => {
+          applyBackup(data);
+          window.location.reload();
+        },
+      });
+    };
+    reader.readAsText(file);
   }
 
   function resetWith(title: string, message: string, action: () => void, doneMessage: string) {
@@ -279,6 +318,29 @@ export default function Settings() {
           onBlur={handleAiApiKeyBlur}
           className="w-full max-w-md rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
         />
+      </section>
+
+      <section className="rounded-lg border border-border bg-surface p-5">
+        <h2 className="mb-3 text-lg font-semibold text-text-primary">Резервная копия</h2>
+        <p className="mb-4 text-sm text-text-muted">
+          Все данные хранятся только в этом браузере. Скачайте бэкап, чтобы не потерять прогресс при очистке
+          браузера или переходе на другое устройство.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={handleExport}>
+            📥 Скачать бэкап
+          </Button>
+          <Button variant="secondary" onClick={handleImportClick}>
+            📤 Восстановить из файла
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+        </div>
       </section>
 
       <section className="rounded-lg border border-danger/30 bg-surface p-5">
