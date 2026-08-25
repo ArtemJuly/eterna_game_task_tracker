@@ -4,12 +4,13 @@ import { generateId } from '../utils/ids';
 import { getStageLevel } from '../utils/trackLevels';
 
 function normalizeStage(s: TrackStage): TrackStage {
+  const legacyProjectId = (s as unknown as { projectId?: string | null }).projectId;
   return {
     ...s,
     description: s.description ?? '',
     xp: s.xp ?? 0,
     level: s.level ?? 1,
-    projectId: s.projectId ?? null,
+    projectIds: s.projectIds ?? (legacyProjectId ? [legacyProjectId] : []),
   };
 }
 
@@ -46,26 +47,41 @@ export function applyTrackXp(trackLinks: TrackLink[], totalXp: number): void {
   );
 }
 
+// A project can be attached to at most one track stage app-wide, so this lookup is unambiguous:
+// completing a task inside that project routes its XP to that stage's track automatically.
+export function getProjectTrackLink(projectId: string): TrackLink | null {
+  const tracks = tracksStore.getSnapshot().map((t, i) => normalizeTrack(t, i));
+  for (const track of tracks) {
+    for (const stage of track.stages) {
+      if (stage.projectIds.includes(projectId)) {
+        return { trackId: track.id, stageId: stage.id };
+      }
+    }
+  }
+  return null;
+}
+
 export function useTracks(): {
   tracks: Track[];
   addTrack: (title: string, goal: string) => void;
   renameTrack: (id: string, title: string) => void;
   setTrackGoal: (id: string, goal: string) => void;
   deleteTrack: (id: string) => void;
-  addStage: (trackId: string, title: string, description: string, projectId: string | null) => void;
+  addStage: (trackId: string, title: string, description: string, projectIds: string[]) => void;
   addStages: (trackId: string, stages: { title: string; description: string }[]) => void;
   renameStage: (
     trackId: string,
     stageId: string,
     title: string,
     description: string,
-    projectId: string | null,
+    projectIds: string[],
   ) => void;
   deleteStage: (trackId: string, stageId: string) => void;
   moveStage: (trackId: string, stageId: string, direction: 'up' | 'down') => void;
   advanceStage: (trackId: string) => void;
   completeTrack: (trackId: string) => void;
   moveTrackPriority: (id: string, direction: 'up' | 'down') => void;
+  assignProjectsToStages: (assignments: { projectId: string; trackId: string; stageId: string }[]) => void;
 } {
   const [rawTracks, setTracks] = tracksStore.useStore();
   const tracks = rawTracks
@@ -114,14 +130,53 @@ export function useTracks(): {
     );
   }
 
-  function addStage(trackId: string, title: string, description: string, projectId: string | null) {
-    setTracks((prev) =>
-      prev.map((t) =>
+  // A project can only be attached to one stage app-wide (XP routing must stay unambiguous),
+  // so claiming it here strips it from wherever else it was attached. Operates on raw (unnormalized)
+  // store data, so legacy stages saved before `projectIds` existed need the same fallback as normalizeStage.
+  function stripProjectsFromOtherStages(prev: Track[], projectIds: string[], keepStageId: string | null): Track[] {
+    if (projectIds.length === 0) return prev;
+    return prev.map((t) => ({
+      ...t,
+      stages: t.stages.map((s) => {
+        if (s.id === keepStageId) return s;
+        const legacyProjectId = (s as unknown as { projectId?: string | null }).projectId;
+        const currentIds = s.projectIds ?? (legacyProjectId ? [legacyProjectId] : []);
+        return { ...s, projectIds: currentIds.filter((pid) => !projectIds.includes(pid)) };
+      }),
+    }));
+  }
+
+  // Bulk version of the same "strip from elsewhere, then claim" rule used by addStage/renameStage —
+  // for applying an AI-suggested project→stage distribution in one action.
+  function assignProjectsToStages(assignments: { projectId: string; trackId: string; stageId: string }[]) {
+    setTracks((prev) => {
+      let next = prev;
+      for (const a of assignments) {
+        next = stripProjectsFromOtherStages(next, [a.projectId], a.stageId);
+        next = next.map((t) =>
+          t.id === a.trackId
+            ? {
+                ...t,
+                stages: t.stages.map((s) =>
+                  s.id === a.stageId ? { ...s, projectIds: [...(s.projectIds ?? []), a.projectId] } : s,
+                ),
+              }
+            : t,
+        );
+      }
+      return next;
+    });
+  }
+
+  function addStage(trackId: string, title: string, description: string, projectIds: string[]) {
+    setTracks((prev) => {
+      const stripped = stripProjectsFromOtherStages(prev, projectIds, null);
+      return stripped.map((t) =>
         t.id === trackId
-          ? { ...t, stages: [...t.stages, { id: generateId(), title, description, xp: 0, level: 1, projectId }] }
+          ? { ...t, stages: [...t.stages, { id: generateId(), title, description, xp: 0, level: 1, projectIds }] }
           : t,
-      ),
-    );
+      );
+    });
   }
 
   function addStages(trackId: string, stages: { title: string; description: string }[]) {
@@ -138,7 +193,7 @@ export function useTracks(): {
                   description: s.description,
                   xp: 0,
                   level: 1,
-                  projectId: null,
+                  projectIds: [],
                 })),
               ],
             }
@@ -152,15 +207,16 @@ export function useTracks(): {
     stageId: string,
     title: string,
     description: string,
-    projectId: string | null,
+    projectIds: string[],
   ) {
-    setTracks((prev) =>
-      prev.map((t) =>
+    setTracks((prev) => {
+      const stripped = stripProjectsFromOtherStages(prev, projectIds, stageId);
+      return stripped.map((t) =>
         t.id === trackId
-          ? { ...t, stages: t.stages.map((s) => (s.id === stageId ? { ...s, title, description, projectId } : s)) }
+          ? { ...t, stages: t.stages.map((s) => (s.id === stageId ? { ...s, title, description, projectIds } : s)) }
           : t,
-      ),
-    );
+      );
+    });
   }
 
   function deleteStage(trackId: string, stageId: string) {
@@ -255,5 +311,6 @@ export function useTracks(): {
     advanceStage,
     completeTrack,
     moveTrackPriority,
+    assignProjectsToStages,
   };
 }

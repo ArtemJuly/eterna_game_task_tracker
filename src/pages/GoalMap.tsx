@@ -196,7 +196,7 @@ export default function GoalMap() {
       const track = tracks.find((t) => t.id === node.trackId);
       if (!track) return 0;
       return track.stages.reduce(
-        (sum, s) => sum + getStageStats(tasks, sessions, track.id, s.id, s.projectId).completedTasks,
+        (sum, s) => sum + getStageStats(tasks, sessions, track.id, s.id, s.projectIds).completedTasks,
         0,
       );
     }
@@ -204,7 +204,7 @@ export default function GoalMap() {
       const track = tracks.find((t) => t.id === node.trackId);
       const stage = track?.stages.find((s) => s.id === node.stageId);
       if (!track || !stage) return 0;
-      return getStageStats(tasks, sessions, track.id, stage.id, stage.projectId).completedTasks;
+      return getStageStats(tasks, sessions, track.id, stage.id, stage.projectIds).completedTasks;
     }
     if (node.type === 'task') {
       const task = tasks.find((t) => t.id === node.taskId);

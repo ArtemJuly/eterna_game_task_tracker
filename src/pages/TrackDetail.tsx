@@ -94,11 +94,11 @@ export default function TrackDetail() {
     setStageModalOpen(true);
   }
 
-  function handleStageSubmit(title: string, description: string, projectId: string | null) {
+  function handleStageSubmit(title: string, description: string, projectIds: string[]) {
     if (editingStage) {
-      renameStage(track.id, editingStage.id, title, description, projectId);
+      renameStage(track.id, editingStage.id, title, description, projectIds);
     } else {
-      addStage(track.id, title, description, projectId);
+      addStage(track.id, title, description, projectIds);
     }
   }
 
@@ -127,7 +127,7 @@ export default function TrackDetail() {
   }
 
   function handleAdvanceStage(stage: TrackStage, nextStage: TrackStage) {
-    const stats = getStageStats(tasks, sessions, track.id, stage.id, stage.projectId);
+    const stats = getStageStats(tasks, sessions, track.id, stage.id, stage.projectIds);
     confirm({
       title: 'Перейти на следующий этап?',
       message: (
@@ -147,7 +147,7 @@ export default function TrackDetail() {
   }
 
   function handleCompleteTrack(stage: TrackStage) {
-    const stats = getStageStats(tasks, sessions, track.id, stage.id, stage.projectId);
+    const stats = getStageStats(tasks, sessions, track.id, stage.id, stage.projectIds);
     confirm({
       title: 'Завершить трек?',
       message: (
@@ -214,7 +214,12 @@ export default function TrackDetail() {
             const isLocked = index > track.currentStageIndex;
             const progress = getStageLevelProgress(stage.xp);
             const nextStage = track.stages[index + 1];
-            const linkedProject = stage.projectId ? projects.find((p) => p.id === stage.projectId) : undefined;
+            const linkedProjects = stage.projectIds
+              .map((id) => projects.find((p) => p.id === id))
+              .filter((p): p is NonNullable<typeof p> => p !== undefined);
+            // A locked stage can still accumulate XP ahead of time via an attached project's tasks —
+            // show its progress once it has any, not just once it becomes the current/completed stage.
+            const showProgress = isCompleted || isCurrent || stage.xp > 0;
 
             return (
               <div
@@ -230,14 +235,12 @@ export default function TrackDetail() {
                     {isCompleted && <Badge tone="success">Пройден</Badge>}
                     {isCurrent && <Badge tone="xp">Текущий</Badge>}
                     {isLocked && <Badge tone="muted">Заблокирован</Badge>}
-                    {(isCompleted || isCurrent) && (
-                      <Badge tone="default">{formatStageLevel(progress.level)}</Badge>
-                    )}
-                    {linkedProject && (
-                      <Link to={`/projects/${linkedProject.id}`} onClick={(e) => e.stopPropagation()}>
-                        <Badge tone="eternas">📁 {linkedProject.title}</Badge>
+                    {showProgress && <Badge tone="default">{formatStageLevel(progress.level)}</Badge>}
+                    {linkedProjects.map((p) => (
+                      <Link key={p.id} to={`/projects/${p.id}`} onClick={(e) => e.stopPropagation()}>
+                        <Badge tone="eternas">📁 {p.title}</Badge>
                       </Link>
-                    )}
+                    ))}
                   </div>
 
                   <div className="flex items-center gap-1">
@@ -262,7 +265,7 @@ export default function TrackDetail() {
 
                 {stage.description && <p className="mt-1 pl-5 text-sm text-text-muted">{stage.description}</p>}
 
-                {(isCompleted || isCurrent) && (
+                {showProgress && (
                   <div className="mt-2">
                     <ProgressBar percent={progress.percent} />
                     <div className="mt-1 text-xs text-text-muted tabular-nums">

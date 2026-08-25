@@ -11,6 +11,7 @@ export const STORAGE_KEYS = {
   goalNodes: 'eterna_goal_nodes',
   dayPlan: 'eterna_day_plan',
   weekSprint: 'eterna_week_sprint',
+  projectViewMode: 'eterna_project_view_mode',
 } as const;
 
 export function readStorage<T>(key: string, fallback: T): T {

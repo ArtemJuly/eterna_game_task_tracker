@@ -8,7 +8,7 @@ import { playDing } from '../utils/sound';
 import { pausePomodoroIfRunningForTask } from './usePomodoros';
 import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier, isSprintTask } from '../utils/taskRewards';
 import { getStreakBonus, getStreakStars } from '../utils/recurrence';
-import { applyTrackXp } from './useTracks';
+import { applyTrackXp, getProjectTrackLink } from './useTracks';
 
 const MAX_FOCUS_TASKS_PER_DAY = 3;
 
@@ -150,7 +150,13 @@ export function useTasks(): {
       totalXp: prev.totalXp + awardedXp,
       eternas: prev.eternas + awardedEternas,
     }));
-    applyTrackXp(task.trackLinks, awardedXp);
+    const projectTrackLink = task.projectId ? getProjectTrackLink(task.projectId) : null;
+    const hasManualLinkAlready = projectTrackLink
+      ? task.trackLinks.some((l) => l.trackId === projectTrackLink.trackId && l.stageId === projectTrackLink.stageId)
+      : false;
+    const effectiveTrackLinks =
+      projectTrackLink && !hasManualLinkAlready ? [...task.trackLinks, projectTrackLink] : task.trackLinks;
+    applyTrackXp(effectiveTrackLinks, awardedXp);
 
     const labelSuffixes: string[] = [];
     if (isFocusedToday) labelSuffixes.push('×2 за топ дня');

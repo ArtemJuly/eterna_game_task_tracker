@@ -5,13 +5,13 @@ export function getStageStats(
   sessions: PomodoroSession[],
   trackId: string,
   stageId: string,
-  projectId: string | null = null,
+  projectIds: string[] = [],
 ): { completedTasks: number; studyMinutes: number } {
   const linkedTaskIds = tasks
     .filter(
       (t) =>
         t.trackLinks.some((l) => l.trackId === trackId && l.stageId === stageId) ||
-        (projectId !== null && t.projectId === projectId),
+        (t.projectId !== null && projectIds.includes(t.projectId)),
     )
     .map((t) => t.id);
 

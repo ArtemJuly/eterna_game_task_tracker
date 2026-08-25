@@ -90,7 +90,13 @@ export function useProjects(): {
     tracksStore.set((prev) =>
       prev.map((track) => ({
         ...track,
-        stages: track.stages.map((s) => (s.projectId === id ? { ...s, projectId: null } : s)),
+        stages: track.stages.map((s) => {
+          const legacyProjectId = (s as unknown as { projectId?: string | null }).projectId;
+          const projectIds = (s.projectIds ?? (legacyProjectId ? [legacyProjectId] : [])).filter(
+            (pid) => pid !== id,
+          );
+          return { ...s, projectIds };
+        }),
       })),
     );
     goalNodesStore.set((prev) =>

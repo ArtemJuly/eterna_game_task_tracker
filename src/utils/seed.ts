@@ -81,9 +81,9 @@ export function seedIfEmpty(): void {
       completedAt: null,
       priority: 0,
       stages: [
-        { id: mathStageId, title: 'Математик', description: '', xp: 130, level: 2, projectId: null },
-        { id: generateId(), title: 'Программирование', description: '', xp: 0, level: 1, projectId: null },
-        { id: generateId(), title: 'Финансы', description: '', xp: 0, level: 1, projectId: null },
+        { id: mathStageId, title: 'Математик', description: '', xp: 130, level: 2, projectIds: [] },
+        { id: generateId(), title: 'Программирование', description: '', xp: 0, level: 1, projectIds: [] },
+        { id: generateId(), title: 'Финансы', description: '', xp: 0, level: 1, projectIds: [] },
       ],
     },
     {
@@ -95,7 +95,7 @@ export function seedIfEmpty(): void {
       status: 'active',
       completedAt: null,
       priority: 1,
-      stages: [{ id: generateId(), title: 'Разговорный', description: '', xp: 40, level: 1, projectId: null }],
+      stages: [{ id: generateId(), title: 'Разговорный', description: '', xp: 40, level: 1, projectIds: [] }],
     },
   ];
 

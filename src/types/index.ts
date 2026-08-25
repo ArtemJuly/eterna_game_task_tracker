@@ -120,7 +120,7 @@ export interface TrackStage {
   description: string;
   xp: number;
   level: number;
-  projectId: string | null;
+  projectIds: string[];
 }
 
 export type TrackStatus = 'active' | 'done';

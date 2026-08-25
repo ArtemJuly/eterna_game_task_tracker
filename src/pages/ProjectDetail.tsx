@@ -27,6 +27,7 @@ import { getStreakStars, isTaskOverdue } from '../utils/recurrence';
 import { getProjectPomodoroStats } from '../utils/pomodoroStats';
 import { TASK_SORT_OPTIONS, compareTasks, type TaskSortMode } from '../utils/taskSort';
 import ProjectBoard from '../components/ProjectBoard';
+import { projectViewModeStore } from '../hooks/stores';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -49,7 +50,7 @@ export default function ProjectDetail() {
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [sortMode, setSortMode] = useState<TaskSortMode>('urgency');
-  const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
+  const [viewMode, setViewMode] = projectViewModeStore.useStore();
   const today = getTodayDateString();
 
   const foundProject = projects.find((p) => p.id === id);

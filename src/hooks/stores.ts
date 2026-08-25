@@ -49,3 +49,5 @@ export const goalNodesStore = createStore<GoalNode[]>(STORAGE_KEYS.goalNodes, []
 export const dayPlanStore = createStore<DayPlan | null>(STORAGE_KEYS.dayPlan, null);
 
 export const weekSprintStore = createStore<WeekSprint | null>(STORAGE_KEYS.weekSprint, null);
+
+export const projectViewModeStore = createStore<'list' | 'board'>(STORAGE_KEYS.projectViewMode, 'list');
