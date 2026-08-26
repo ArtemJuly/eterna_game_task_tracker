@@ -41,6 +41,7 @@ export function useProjects(): {
   toggleSprint: (id: string) => void;
   toggleActive: (id: string) => void;
   moveProjectPriority: (id: string, direction: 'up' | 'down') => void;
+  reorderProjects: (orderedIds: string[]) => void;
   toggleShowCompletedTasks: (id: string) => void;
   addBoardColumn: (projectId: string, title: string) => void;
   renameBoardColumn: (projectId: string, columnId: string, title: string) => void;
@@ -235,6 +236,11 @@ export function useProjects(): {
     );
   }
 
+  function reorderProjects(orderedIds: string[]) {
+    const priorityById = new Map(orderedIds.map((id, index) => [id, index]));
+    setProjects((prev) => prev.map((p) => (priorityById.has(p.id) ? { ...p, priority: priorityById.get(p.id)! } : p)));
+  }
+
   return {
     projects,
     addProject,
@@ -245,6 +251,7 @@ export function useProjects(): {
     toggleSprint,
     toggleActive,
     moveProjectPriority,
+    reorderProjects,
     toggleShowCompletedTasks,
     addBoardColumn,
     renameBoardColumn,

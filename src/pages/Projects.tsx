@@ -12,12 +12,30 @@ import ProjectStatusSelect from '../components/ProjectStatusSelect';
 import ShowCompletedToggle from '../components/ShowCompletedToggle';
 
 export default function Projects() {
-  const { projects, addProject, toggleSprint, toggleActive, moveProjectPriority, setProjectStatus } = useProjects();
+  const { projects, addProject, toggleSprint, toggleActive, moveProjectPriority, reorderProjects, setProjectStatus } =
+    useProjects();
   const { tasks } = useTasks();
   const [modalOpen, setModalOpen] = useState(false);
   const [showDone, setShowDone] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   const activeProjects = projects.filter((p) => p.status !== 'done');
+
+  function handleDrop(sourceId: string, targetId: string) {
+    if (sourceId && sourceId !== targetId) {
+      const ids = activeProjects.map((p) => p.id);
+      const fromIndex = ids.indexOf(sourceId);
+      const toIndex = ids.indexOf(targetId);
+      if (fromIndex !== -1 && toIndex !== -1) {
+        ids.splice(fromIndex, 1);
+        ids.splice(toIndex, 0, sourceId);
+        reorderProjects(ids);
+      }
+    }
+    setDraggedId(null);
+    setDragOverId(null);
+  }
   const doneProjects = projects
     .filter((p) => p.status === 'done')
     .sort((a, b) => new Date(b.completedAt ?? 0).getTime() - new Date(a.completedAt ?? 0).getTime());
@@ -52,7 +70,24 @@ export default function Projects() {
               <Link
                 key={project.id}
                 to={`/projects/${project.id}`}
+                draggable={false}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (dragOverId !== project.id) setDragOverId(project.id);
+                }}
+                onDragLeave={(e) => {
+                  if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                  setDragOverId((prev) => (prev === project.id ? null : prev));
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const sourceId = e.dataTransfer.getData('text/plain') || draggedId;
+                  if (sourceId) handleDrop(sourceId, project.id);
+                }}
                 className={`flex gap-4 rounded-lg border p-4 transition-colors hover:bg-overlay/[0.04] ${
+                  draggedId === project.id ? 'opacity-40' : ''
+                } ${dragOverId === project.id && draggedId !== project.id ? 'border-accent-xp' : ''} ${
                   project.isSprint
                     ? 'border-accent-xp bg-accent-xp/[0.06] ring-2 ring-accent-xp'
                     : project.isActive
@@ -67,6 +102,22 @@ export default function Projects() {
                     e.stopPropagation();
                   }}
                 >
+                  <div
+                    draggable
+                    onDragStart={(e) => {
+                      setDraggedId(project.id);
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('text/plain', project.id);
+                    }}
+                    onDragEnd={() => {
+                      setDraggedId(null);
+                      setDragOverId(null);
+                    }}
+                    title="Перетащить, чтобы изменить порядок"
+                    className="cursor-grab select-none text-text-muted hover:text-text-primary active:cursor-grabbing"
+                  >
+                    ⠿
+                  </div>
                   <span className="text-lg font-bold text-text-muted tabular-nums">#{index + 1}</span>
                   <div className="flex flex-col">
                     <Button
