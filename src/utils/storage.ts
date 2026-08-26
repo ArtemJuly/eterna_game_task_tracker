@@ -13,6 +13,7 @@ export const STORAGE_KEYS = {
   weekSprint: 'eterna_week_sprint',
   projectViewMode: 'eterna_project_view_mode',
   taskViewMode: 'eterna_task_view_mode',
+  taskBoardColumns: 'eterna_task_board_columns',
 } as const;
 
 export function readStorage<T>(key: string, fallback: T): T {

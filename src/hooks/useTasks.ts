@@ -1,5 +1,13 @@
-import { characterStore, goalNodesStore, historyStore, projectsStore, settingsStore, tasksStore } from './stores';
-import type { Task, TaskStatus, TrackLink } from '../types';
+import {
+  characterStore,
+  goalNodesStore,
+  historyStore,
+  projectsStore,
+  settingsStore,
+  taskBoardColumnsStore,
+  tasksStore,
+} from './stores';
+import type { BoardColumn, Task, TaskStatus, TrackLink } from '../types';
 import { generateId } from '../utils/ids';
 import { pushToast } from './useToast';
 import { triggerXpPulse } from './useXpPulse';
@@ -24,6 +32,7 @@ export interface NewTaskInput {
   recurrenceIntervalDays: number | null;
   trackLinks: TrackLink[];
   boardColumnId: string | null;
+  taskBoardColumnId: string | null;
 }
 
 function normalizeTask(t: Task): Task {
@@ -35,6 +44,7 @@ function normalizeTask(t: Task): Task {
     streakCount: t.streakCount ?? 0,
     trackLinks: t.trackLinks ?? [],
     boardColumnId: t.boardColumnId ?? null,
+    taskBoardColumnId: t.taskBoardColumnId ?? null,
   };
 }
 
@@ -56,9 +66,14 @@ export function useTasks(): {
   setTaskStatus: (id: string, status: TaskStatus) => void;
   deleteTask: (id: string) => void;
   toggleFocus: (id: string) => void;
+  taskBoardColumns: BoardColumn[];
+  addTaskBoardColumn: (title: string) => void;
+  renameTaskBoardColumn: (id: string, title: string) => void;
+  deleteTaskBoardColumn: (id: string) => void;
 } {
   const [rawTasks, setTasks] = tasksStore.useStore();
   const tasks = rawTasks.map(normalizeTask);
+  const [taskBoardColumns, setTaskBoardColumns] = taskBoardColumnsStore.useStore();
 
   function addTask(input: NewTaskInput) {
     const today = getTodayDateString();
@@ -80,8 +95,23 @@ export function useTasks(): {
       streakCount: 0,
       trackLinks: input.trackLinks,
       boardColumnId: input.boardColumnId,
+      taskBoardColumnId: input.taskBoardColumnId,
     };
     setTasks((prev) => [...prev, task]);
+  }
+
+  function addTaskBoardColumn(title: string) {
+    const column: BoardColumn = { id: generateId(), title };
+    setTaskBoardColumns((prev) => [...prev, column]);
+  }
+
+  function renameTaskBoardColumn(id: string, title: string) {
+    setTaskBoardColumns((prev) => prev.map((c) => (c.id === id ? { ...c, title } : c)));
+  }
+
+  function deleteTaskBoardColumn(id: string) {
+    setTaskBoardColumns((prev) => prev.filter((c) => c.id !== id));
+    setTasks((prev) => prev.map((t) => (t.taskBoardColumnId === id ? { ...t, taskBoardColumnId: null } : t)));
   }
 
   function updateTask(id: string, patch: Partial<NewTaskInput>) {
@@ -273,5 +303,19 @@ export function useTasks(): {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, focusDate: today } : t)));
   }
 
-  return { tasks, addTask, updateTask, startTask, completeTask, cancelTask, setTaskStatus, deleteTask, toggleFocus };
+  return {
+    tasks,
+    addTask,
+    updateTask,
+    startTask,
+    completeTask,
+    cancelTask,
+    setTaskStatus,
+    deleteTask,
+    toggleFocus,
+    taskBoardColumns,
+    addTaskBoardColumn,
+    renameTaskBoardColumn,
+    deleteTaskBoardColumn,
+  };
 }

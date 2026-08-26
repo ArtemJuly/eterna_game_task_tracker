@@ -28,6 +28,7 @@ export interface Task {
   streakCount: number;
   trackLinks: TrackLink[];
   boardColumnId: string | null;
+  taskBoardColumnId: string | null;
 }
 
 export type ProjectStatus = 'active' | 'done';

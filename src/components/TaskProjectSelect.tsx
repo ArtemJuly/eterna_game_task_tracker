@@ -16,7 +16,7 @@ export default function TaskProjectSelect({ projectId, projects, onChange }: Tas
       }}
       onChange={(e) => onChange(e.target.value || null)}
       title="Перенести в другой проект"
-      className="cursor-pointer rounded-[4px] border border-border bg-overlay/5 px-2 py-0.5 text-xs font-medium text-text-primary outline-none"
+      className="max-w-full min-w-0 truncate cursor-pointer rounded-[4px] border border-border bg-overlay/5 px-2 py-0.5 text-xs font-medium text-text-primary outline-none"
     >
       <option value="">Без проекта</option>
       {projects.map((p) => (

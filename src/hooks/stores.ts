@@ -1,5 +1,6 @@
 import type {
   ActivePomodoro,
+  BoardColumn,
   Character,
   DayPlan,
   GoalNode,
@@ -53,3 +54,5 @@ export const weekSprintStore = createStore<WeekSprint | null>(STORAGE_KEYS.weekS
 export const projectViewModeStore = createStore<'list' | 'board'>(STORAGE_KEYS.projectViewMode, 'list');
 
 export const taskViewModeStore = createStore<'list' | 'board'>(STORAGE_KEYS.taskViewMode, 'list');
+
+export const taskBoardColumnsStore = createStore<BoardColumn[]>(STORAGE_KEYS.taskBoardColumns, []);

@@ -116,6 +116,7 @@ export default function TaskIntakeModal({ open, onClose }: TaskIntakeModalProps)
         recurrenceIntervalDays: null,
         trackLinks: d.trackId && d.stageId ? [{ trackId: d.trackId, stageId: d.stageId }] : [],
         boardColumnId: null,
+        taskBoardColumnId: null,
       });
     }
     pushToast(`Создано задач: ${drafts.length}`);

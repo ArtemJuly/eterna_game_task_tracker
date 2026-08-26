@@ -36,6 +36,7 @@ interface TaskModalProps {
   defaultProjectId?: string | null;
   defaultParentTaskId?: string | null;
   defaultBoardColumnId?: string | null;
+  defaultTaskBoardColumnId?: string | null;
   defaultStatus?: TaskStatus;
 }
 
@@ -47,6 +48,7 @@ export default function TaskModal({
   defaultProjectId,
   defaultParentTaskId,
   defaultBoardColumnId,
+  defaultTaskBoardColumnId,
   defaultStatus,
 }: TaskModalProps) {
   const { projects } = useProjects();
@@ -62,6 +64,7 @@ export default function TaskModal({
   const [status, setStatus] = useState<TaskStatus>('planned');
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [boardColumnId, setBoardColumnId] = useState<string | null>(null);
+  const [taskBoardColumnId, setTaskBoardColumnId] = useState<string | null>(null);
   const [recurrenceMode, setRecurrenceMode] = useState('none');
   const [customDays, setCustomDays] = useState(3);
   const [trackLinks, setTrackLinks] = useState<TrackLink[]>([]);
@@ -82,6 +85,7 @@ export default function TaskModal({
     setStatus(initialTask?.status ?? defaultStatus ?? 'planned');
     setDueDate(initialTask?.dueDate ?? null);
     setBoardColumnId(initialTask?.boardColumnId ?? defaultBoardColumnId ?? null);
+    setTaskBoardColumnId(initialTask?.taskBoardColumnId ?? defaultTaskBoardColumnId ?? null);
     const intervalDays = initialTask?.recurrenceIntervalDays ?? null;
     setRecurrenceMode(modeForInterval(intervalDays));
     if (intervalDays !== null && !PRESET_DAYS.includes(intervalDays)) setCustomDays(intervalDays);
@@ -90,7 +94,15 @@ export default function TaskModal({
     setPickerStageId('');
     setTrackPickerOpen(false);
     setLastEstimate(null);
-  }, [open, initialTask, defaultProjectId, defaultParentTaskId, defaultBoardColumnId, defaultStatus]);
+  }, [
+    open,
+    initialTask,
+    defaultProjectId,
+    defaultParentTaskId,
+    defaultBoardColumnId,
+    defaultTaskBoardColumnId,
+    defaultStatus,
+  ]);
 
   const availableTracks = tracks.filter((t) => !trackLinks.some((l) => l.trackId === t.id));
   const pickerStages = tracks.find((t) => t.id === pickerTrackId)?.stages ?? [];
@@ -198,6 +210,7 @@ export default function TaskModal({
       recurrenceIntervalDays,
       trackLinks,
       boardColumnId,
+      taskBoardColumnId,
     });
     onClose();
   }

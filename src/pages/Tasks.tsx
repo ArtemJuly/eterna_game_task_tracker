@@ -68,10 +68,15 @@ export default function Tasks() {
 
   const boardTasks = useMemo(() => {
     return tasks
-      .filter((t) => t.status !== 'cancelled')
+      .filter((t) => t.status !== 'cancelled' && t.status !== 'done')
       .filter((t) => (projectFilter ? t.projectId === projectFilter : true))
       .sort((a, b) => compareTasks(a, b, sortMode, today, dayPlanTaskIds));
   }, [tasks, projectFilter, sortMode, today, dayPlanTaskIds]);
+
+  const activeCount = useMemo(
+    () => tasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled').length,
+    [tasks],
+  );
 
   function openCreate() {
     setEditingTask(null);
@@ -118,7 +123,12 @@ export default function Tasks() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-primary">Задачи</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-text-primary">Задачи</h1>
+          <span className="rounded-full border border-border bg-surface px-2.5 py-0.5 text-sm text-text-muted tabular-nums">
+            {activeCount} не выполнено
+          </span>
+        </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => setAiHubOpen(true)}>
             🤖 AI-агент
