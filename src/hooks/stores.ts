@@ -51,3 +51,5 @@ export const dayPlanStore = createStore<DayPlan | null>(STORAGE_KEYS.dayPlan, nu
 export const weekSprintStore = createStore<WeekSprint | null>(STORAGE_KEYS.weekSprint, null);
 
 export const projectViewModeStore = createStore<'list' | 'board'>(STORAGE_KEYS.projectViewMode, 'list');
+
+export const taskViewModeStore = createStore<'list' | 'board'>(STORAGE_KEYS.taskViewMode, 'list');

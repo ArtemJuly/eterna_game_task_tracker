@@ -36,6 +36,7 @@ interface TaskModalProps {
   defaultProjectId?: string | null;
   defaultParentTaskId?: string | null;
   defaultBoardColumnId?: string | null;
+  defaultStatus?: TaskStatus;
 }
 
 export default function TaskModal({
@@ -46,6 +47,7 @@ export default function TaskModal({
   defaultProjectId,
   defaultParentTaskId,
   defaultBoardColumnId,
+  defaultStatus,
 }: TaskModalProps) {
   const { projects } = useProjects();
   const { tasks } = useTasks();
@@ -77,7 +79,7 @@ export default function TaskModal({
     setParentTaskId(initialTask?.parentTaskId ?? defaultParentTaskId ?? '');
     setXp(initialTask?.xp ?? 20);
     setEternas(initialTask?.eternas ?? 5);
-    setStatus(initialTask?.status ?? 'planned');
+    setStatus(initialTask?.status ?? defaultStatus ?? 'planned');
     setDueDate(initialTask?.dueDate ?? null);
     setBoardColumnId(initialTask?.boardColumnId ?? defaultBoardColumnId ?? null);
     const intervalDays = initialTask?.recurrenceIntervalDays ?? null;
@@ -88,7 +90,7 @@ export default function TaskModal({
     setPickerStageId('');
     setTrackPickerOpen(false);
     setLastEstimate(null);
-  }, [open, initialTask, defaultProjectId, defaultParentTaskId, defaultBoardColumnId]);
+  }, [open, initialTask, defaultProjectId, defaultParentTaskId, defaultBoardColumnId, defaultStatus]);
 
   const availableTracks = tracks.filter((t) => !trackLinks.some((l) => l.trackId === t.id));
   const pickerStages = tracks.find((t) => t.id === pickerTrackId)?.stages ?? [];

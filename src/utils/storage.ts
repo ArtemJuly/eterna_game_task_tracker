@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
   dayPlan: 'eterna_day_plan',
   weekSprint: 'eterna_week_sprint',
   projectViewMode: 'eterna_project_view_mode',
+  taskViewMode: 'eterna_task_view_mode',
 } as const;
 
 export function readStorage<T>(key: string, fallback: T): T {

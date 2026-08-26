@@ -11,6 +11,7 @@ import { getDirectChildren } from '../utils/taskTree';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import TaskModal from '../components/TaskModal';
+import TaskBoard from '../components/TaskBoard';
 import TaskIntakeModal from '../components/TaskIntakeModal';
 import DayPlanModal from '../components/DayPlanModal';
 import WeekSprintModal from '../components/WeekSprintModal';
@@ -24,6 +25,7 @@ import { getTodayDateString } from '../utils/today';
 import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier } from '../utils/taskRewards';
 import { getStreakStars, isTaskOverdue } from '../utils/recurrence';
 import { TASK_SORT_OPTIONS, compareTasks, type TaskSortMode } from '../utils/taskSort';
+import { taskViewModeStore } from '../hooks/stores';
 
 type FilterTab = 'all' | TaskStatus;
 
@@ -48,6 +50,7 @@ export default function Tasks() {
   const [tab, setTab] = useState<FilterTab>('all');
   const [projectFilter, setProjectFilter] = useState<string>('');
   const [sortMode, setSortMode] = useState<TaskSortMode>('urgency');
+  const [viewMode, setViewMode] = taskViewModeStore.useStore();
   const [modalOpen, setModalOpen] = useState(false);
   const [aiHubOpen, setAiHubOpen] = useState(false);
   const [intakeOpen, setIntakeOpen] = useState(false);
@@ -62,6 +65,13 @@ export default function Tasks() {
       .filter((t) => (projectFilter ? t.projectId === projectFilter : true))
       .sort((a, b) => compareTasks(a, b, sortMode, today, dayPlanTaskIds));
   }, [tasks, tab, projectFilter, sortMode, today, dayPlanTaskIds]);
+
+  const boardTasks = useMemo(() => {
+    return tasks
+      .filter((t) => t.status !== 'cancelled')
+      .filter((t) => (projectFilter ? t.projectId === projectFilter : true))
+      .sort((a, b) => compareTasks(a, b, sortMode, today, dayPlanTaskIds));
+  }, [tasks, projectFilter, sortMode, today, dayPlanTaskIds]);
 
   function openCreate() {
     setEditingTask(null);
@@ -120,20 +130,42 @@ export default function Tasks() {
       </div>
 
       <div className="flex items-center justify-between gap-4">
-        <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
-          {TABS.map((t) => (
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
             <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => setViewMode('list')}
               className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
-                tab === t.key
-                  ? 'bg-overlay/[0.06] text-text-primary'
-                  : 'text-text-muted hover:text-text-primary'
+                viewMode === 'list' ? 'bg-overlay/[0.06] text-text-primary' : 'text-text-muted hover:text-text-primary'
               }`}
             >
-              {t.label}
+              Список
             </button>
-          ))}
+            <button
+              onClick={() => setViewMode('board')}
+              className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewMode === 'board' ? 'bg-overlay/[0.06] text-text-primary' : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              Доска
+            </button>
+          </div>
+          {viewMode === 'list' && (
+            <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
+              {TABS.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setTab(t.key)}
+                  className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                    tab === t.key
+                      ? 'bg-overlay/[0.06] text-text-primary'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2">
@@ -163,6 +195,9 @@ export default function Tasks() {
         </div>
       </div>
 
+      {viewMode === 'board' ? (
+        <TaskBoard tasks={boardTasks} projects={projects} />
+      ) : (
       <div className="flex flex-col gap-2">
         {filtered.length === 0 ? (
           <div className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
@@ -279,6 +314,7 @@ export default function Tasks() {
           })
         )}
       </div>
+      )}
 
       <TaskModal
         open={modalOpen}
