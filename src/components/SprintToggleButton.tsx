@@ -14,7 +14,7 @@ export default function SprintToggleButton({ active, onClick }: SprintToggleButt
           : 'border-border text-text-muted hover:bg-overlay/[0.04] hover:text-text-primary'
       }`}
     >
-      🚀
+      {active ? '🚀' : '⭐'}
     </button>
   );
 }

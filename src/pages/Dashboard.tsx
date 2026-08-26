@@ -231,7 +231,11 @@ export default function Dashboard() {
                 }`}
               >
                 <div className="flex items-center gap-1.5">
-                  {project.isSprint && <span title="Проект-спринт: задачи дают ×1.2 к XP и этернам">🚀</span>}
+                  {project.isSprint ? (
+                    <span title="Проект-спринт: задачи дают ×1.2 к XP и этернам">🚀</span>
+                  ) : (
+                    <span title="Не входит в топ-3 проектов-спринтов">⭐</span>
+                  )}
                   <div className="font-medium text-text-primary">{project.title}</div>
                 </div>
                 <div className="mt-1 text-sm text-text-muted tabular-nums">
