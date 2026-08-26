@@ -26,3 +26,10 @@ export function getMultiplierIcon(task: Task, projects: Project[], today: string
   if (isSprintTask(task, projects)) icons.push('🚀');
   return icons.join('');
 }
+
+export function getMultiplierTooltip(task: Task, projects: Project[], today: string): string {
+  const reasons = [];
+  if (task.focusDate === today) reasons.push('⭐ Топ дня ×2');
+  if (isSprintTask(task, projects)) reasons.push('🚀 Проект-спринт ×1.2');
+  return reasons.join(' · ');
+}

@@ -16,7 +16,7 @@ import TaskModal from '../components/TaskModal';
 import TaskStatusSelect from '../components/TaskStatusSelect';
 import TaskProjectSelect from '../components/TaskProjectSelect';
 import TaskDueDateControl from '../components/TaskDueDateControl';
-import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier } from '../utils/taskRewards';
+import { formatMultiplier, getMultiplierIcon, getMultiplierTooltip, getTaskRewardMultiplier } from '../utils/taskRewards';
 import { getStreakStars, isTaskOverdue } from '../utils/recurrence';
 
 export default function TaskDetail() {
@@ -194,7 +194,10 @@ export default function TaskDetail() {
                 )}
                 {isTaskOverdue(task, today) && <Badge tone="danger">Просрочено</Badge>}
                 {rewardMultiplier !== 1 && !isTerminal ? (
-                  <span className="text-sm text-accent-xp tabular-nums">
+                  <span
+                    title={getMultiplierTooltip(task, projects, today)}
+                    className="text-sm text-accent-xp tabular-nums"
+                  >
                     {multiplierIcon}×{formatMultiplier(rewardMultiplier)} {Math.round(task.xp * rewardMultiplier)} XP ·{' '}
                     {Math.round(task.eternas * rewardMultiplier)} ✦
                   </span>
@@ -313,7 +316,10 @@ export default function TaskDetail() {
                     )}
                     {isTaskOverdue(child, today) && <Badge tone="danger">Просрочено</Badge>}
                     {childRewardMultiplier !== 1 && !childTerminal ? (
-                      <span className="text-sm text-accent-xp tabular-nums">
+                      <span
+                        title={getMultiplierTooltip(child, projects, today)}
+                        className="text-sm text-accent-xp tabular-nums"
+                      >
                         {childMultiplierIcon}×{formatMultiplier(childRewardMultiplier)}{' '}
                         {Math.round(child.xp * childRewardMultiplier)} XP · {Math.round(child.eternas * childRewardMultiplier)} ✦
                       </span>

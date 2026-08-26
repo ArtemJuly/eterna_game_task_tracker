@@ -5,7 +5,7 @@ import { useProjects } from '../hooks/useProjects';
 import { useTasks } from '../hooks/useTasks';
 import { useConfirm } from '../hooks/useConfirm';
 import { getTodayDateString } from '../utils/today';
-import { getTaskRewardMultiplier, getMultiplierIcon, formatMultiplier } from '../utils/taskRewards';
+import { getTaskRewardMultiplier, getMultiplierIcon, getMultiplierTooltip, formatMultiplier } from '../utils/taskRewards';
 import Button from './ui/Button';
 import Badge from './ui/Badge';
 import TaskDueDateControl from './TaskDueDateControl';
@@ -225,7 +225,10 @@ export default function ProjectBoard({ project, tasks, projects }: ProjectBoardP
                         {task.status === 'cancelled' && <Badge tone="danger">Отменена</Badge>}
                         <TaskDueDateControl task={task} onUpdate={(patch) => updateTask(task.id, patch)} />
                         {rewardMultiplier !== 1 && !isTerminal ? (
-                          <span className="text-xs text-accent-xp tabular-nums">
+                          <span
+                            title={getMultiplierTooltip(task, projects, today)}
+                            className="text-xs text-accent-xp tabular-nums"
+                          >
                             {multiplierIcon}×{formatMultiplier(rewardMultiplier)}{' '}
                             {Math.round(task.xp * rewardMultiplier)} XP · {Math.round(task.eternas * rewardMultiplier)} ✦
                           </span>

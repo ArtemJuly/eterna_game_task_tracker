@@ -151,8 +151,12 @@ export default function ProjectDetail() {
 
       <div
         className={`rounded-lg border p-5 ${
-          project.isActive ? 'border-accent-eternas/50 bg-accent-eternas/[0.04]' : 'border-border bg-surface'
-        } ${project.isSprint ? 'ring-2 ring-accent-xp/60' : ''}`}
+          project.isSprint
+            ? 'border-accent-xp bg-accent-xp/[0.06] ring-2 ring-accent-xp'
+            : project.isActive
+              ? 'border-accent-eternas/50 bg-accent-eternas/[0.04]'
+              : 'border-border bg-surface'
+        }`}
       >
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">

@@ -22,7 +22,7 @@ import TaskDueDateControl from '../components/TaskDueDateControl';
 import PomodoroTimer from '../components/PomodoroTimer';
 import TodayFocusButton from '../components/TodayFocusButton';
 import { getTodayDateString } from '../utils/today';
-import { formatMultiplier, getMultiplierIcon, getTaskRewardMultiplier } from '../utils/taskRewards';
+import { formatMultiplier, getMultiplierIcon, getMultiplierTooltip, getTaskRewardMultiplier } from '../utils/taskRewards';
 import { getStreakStars, isTaskOverdue } from '../utils/recurrence';
 import { TASK_SORT_OPTIONS, compareTasks, type TaskSortMode } from '../utils/taskSort';
 import { taskViewModeStore } from '../hooks/stores';
@@ -273,7 +273,10 @@ export default function Tasks() {
                     )}
                     {isTaskOverdue(task, today) && <Badge tone="danger">Просрочено</Badge>}
                     {rewardMultiplier !== 1 && (task.status === 'planned' || task.status === 'in_progress') ? (
-                      <span className="text-sm text-accent-xp tabular-nums">
+                      <span
+                        title={getMultiplierTooltip(task, projects, today)}
+                        className="text-sm text-accent-xp tabular-nums"
+                      >
                         {multiplierIcon}×{formatMultiplier(rewardMultiplier)} {Math.round(task.xp * rewardMultiplier)} XP ·{' '}
                         {Math.round(task.eternas * rewardMultiplier)} ✦
                       </span>

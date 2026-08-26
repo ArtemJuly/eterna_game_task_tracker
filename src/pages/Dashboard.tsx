@@ -223,11 +223,15 @@ export default function Dashboard() {
                 key={project.id}
                 to={`/projects/${project.id}`}
                 className={`rounded-lg border p-4 transition-colors hover:bg-overlay/[0.04] ${
-                  project.isActive ? 'border-accent-eternas/50 bg-accent-eternas/[0.04]' : 'border-border bg-surface'
+                  project.isSprint
+                    ? 'border-accent-xp bg-accent-xp/[0.06] ring-2 ring-accent-xp'
+                    : project.isActive
+                      ? 'border-accent-eternas/50 bg-accent-eternas/[0.04]'
+                      : 'border-border bg-surface'
                 }`}
               >
                 <div className="flex items-center gap-1.5">
-                  {project.isSprint && <span>🚀</span>}
+                  {project.isSprint && <span title="Проект-спринт: задачи дают ×1.2 к XP и этернам">🚀</span>}
                   <div className="font-medium text-text-primary">{project.title}</div>
                 </div>
                 <div className="mt-1 text-sm text-text-muted tabular-nums">

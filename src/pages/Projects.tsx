@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useProjects } from '../hooks/useProjects';
 import { useTasks } from '../hooks/useTasks';
 import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
 import ProgressBar from '../components/ui/ProgressBar';
 import ProjectModal from '../components/ProjectModal';
 import SprintToggleButton from '../components/SprintToggleButton';
@@ -52,10 +53,12 @@ export default function Projects() {
                 key={project.id}
                 to={`/projects/${project.id}`}
                 className={`flex gap-4 rounded-lg border p-4 transition-colors hover:bg-overlay/[0.04] ${
-                  project.isActive
-                    ? 'border-accent-eternas/50 bg-accent-eternas/[0.04]'
-                    : 'border-border bg-surface'
-                } ${project.isSprint ? 'ring-2 ring-accent-xp/60' : ''}`}
+                  project.isSprint
+                    ? 'border-accent-xp bg-accent-xp/[0.06] ring-2 ring-accent-xp'
+                    : project.isActive
+                      ? 'border-accent-eternas/50 bg-accent-eternas/[0.04]'
+                      : 'border-border bg-surface'
+                }`}
               >
                 <div
                   className="flex flex-col items-center gap-1 pt-0.5"
@@ -96,6 +99,7 @@ export default function Projects() {
                       >
                         {project.title}
                       </div>
+                      {project.isSprint && <Badge tone="xp">🚀 Спринт ×1.2</Badge>}
                       <ProjectStatusSelect status={project.status} onChange={(status) => setProjectStatus(project.id, status)} />
                       {project.status !== 'done' && (
                         <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
