@@ -38,8 +38,7 @@ const TABS: { key: FilterTab; label: string }[] = [
 
 export default function Tasks() {
   const navigate = useNavigate();
-  const { tasks, addTask, updateTask, startTask, completeTask, cancelTask, setTaskStatus, deleteTask, toggleFocus } =
-    useTasks();
+  const { tasks, addTask, updateTask, completeTask, setTaskStatus, deleteTask, toggleFocus } = useTasks();
   const { projects } = useProjects();
   const { confirm, dialog } = useConfirm();
   const { todayPlan } = useDayPlan();
@@ -94,16 +93,6 @@ export default function Tasks() {
     } else {
       addTask(input);
     }
-  }
-
-  function handleCancel(task: Task) {
-    confirm({
-      title: 'Отменить задачу?',
-      message: `«${task.title}» будет помечена как отменённая. XP и этерны за неё не начислятся.`,
-      confirmLabel: 'Отменить задачу',
-      danger: true,
-      onConfirm: () => cancelTask(task.id),
-    });
   }
 
   function handleDelete(task: Task) {
@@ -300,19 +289,9 @@ export default function Tasks() {
                 </div>
 
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  {task.status === 'planned' && (
-                    <Button variant="secondary" onClick={() => startTask(task.id)}>
-                      В работу
-                    </Button>
-                  )}
                   {(task.status === 'planned' || task.status === 'in_progress') && (
                     <Button variant="primary" onClick={() => completeTask(task.id)}>
                       Выполнить
-                    </Button>
-                  )}
-                  {(task.status === 'planned' || task.status === 'in_progress') && (
-                    <Button variant="danger" onClick={() => handleCancel(task)}>
-                      Отменить
                     </Button>
                   )}
                   <Button variant="secondary" onClick={() => openEdit(task)}>

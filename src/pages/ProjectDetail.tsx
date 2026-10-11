@@ -44,8 +44,7 @@ export default function ProjectDetail() {
     toggleShowCompletedTasks,
     setProjectTimeCategories,
   } = useProjects();
-  const { tasks, addTask, updateTask, startTask, completeTask, cancelTask, setTaskStatus, deleteTask, toggleFocus } =
-    useTasks();
+  const { tasks, addTask, updateTask, completeTask, setTaskStatus, deleteTask, toggleFocus } = useTasks();
   const { sessions } = usePomodoros();
   const { categories: timeCategories } = useTimeCategories();
   const { confirm, dialog } = useConfirm();
@@ -120,16 +119,6 @@ export default function ProjectDetail() {
     } else {
       addTask(input);
     }
-  }
-
-  function handleCancelTask(task: Task) {
-    confirm({
-      title: 'Отменить задачу?',
-      message: `«${task.title}» будет помечена как отменённая. XP и этерны за неё не начислятся.`,
-      confirmLabel: 'Отменить задачу',
-      danger: true,
-      onConfirm: () => cancelTask(task.id),
-    });
   }
 
   function handleDeleteTask(task: Task) {
@@ -387,19 +376,9 @@ export default function ProjectDetail() {
                 </div>
 
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  {task.status === 'planned' && (
-                    <Button variant="secondary" onClick={() => startTask(task.id)}>
-                      В работу
-                    </Button>
-                  )}
                   {(task.status === 'planned' || task.status === 'in_progress') && (
                     <Button variant="primary" onClick={() => completeTask(task.id)}>
                       Выполнить
-                    </Button>
-                  )}
-                  {(task.status === 'planned' || task.status === 'in_progress') && (
-                    <Button variant="danger" onClick={() => handleCancelTask(task)}>
-                      Отменить
                     </Button>
                   )}
                   <Button variant="secondary" onClick={() => openEditTask(task)}>

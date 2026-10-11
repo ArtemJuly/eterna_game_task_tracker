@@ -22,7 +22,7 @@ import { getStreakStars, isTaskOverdue } from '../utils/recurrence';
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { tasks, addTask, updateTask, startTask, completeTask, cancelTask, setTaskStatus, deleteTask, toggleFocus } =
+  const { tasks, addTask, updateTask, completeTask, setTaskStatus, deleteTask, toggleFocus } =
     useTasks();
   const { projects } = useProjects();
   const { confirm, dialog } = useConfirm();
@@ -80,16 +80,6 @@ export default function TaskDetail() {
     }
   }
 
-  function handleCancelSelf() {
-    confirm({
-      title: 'Отменить задачу?',
-      message: `«${task.title}» будет помечена как отменённая. XP и этерны за неё не начислятся.`,
-      confirmLabel: 'Отменить задачу',
-      danger: true,
-      onConfirm: () => cancelTask(task.id),
-    });
-  }
-
   function handleDeleteSelf() {
     const childCount = children.length;
     confirm({
@@ -123,16 +113,6 @@ export default function TaskDetail() {
     } else {
       addTask(input);
     }
-  }
-
-  function handleCancelChild(child: Task) {
-    confirm({
-      title: 'Отменить задачу?',
-      message: `«${child.title}» будет помечена как отменённая. XP и этерны за неё не начислятся.`,
-      confirmLabel: 'Отменить задачу',
-      danger: true,
-      onConfirm: () => cancelTask(child.id),
-    });
   }
 
   function handleDeleteChild(child: Task) {
@@ -214,19 +194,9 @@ export default function TaskDetail() {
           </div>
 
           <div className="flex items-center gap-2">
-            {task.status === 'planned' && (
-              <Button variant="secondary" onClick={() => startTask(task.id)}>
-                В работу
-              </Button>
-            )}
             {(task.status === 'planned' || task.status === 'in_progress') && (
               <Button variant="primary" onClick={() => completeTask(task.id)}>
                 Выполнить
-              </Button>
-            )}
-            {(task.status === 'planned' || task.status === 'in_progress') && (
-              <Button variant="danger" onClick={handleCancelSelf}>
-                Отменить
               </Button>
             )}
             <Button variant="secondary" onClick={() => setEditModalOpen(true)}>
@@ -340,19 +310,9 @@ export default function TaskDetail() {
                 </div>
 
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  {child.status === 'planned' && (
-                    <Button variant="secondary" onClick={() => startTask(child.id)}>
-                      В работу
-                    </Button>
-                  )}
                   {(child.status === 'planned' || child.status === 'in_progress') && (
                     <Button variant="primary" onClick={() => completeTask(child.id)}>
                       Выполнить
-                    </Button>
-                  )}
-                  {(child.status === 'planned' || child.status === 'in_progress') && (
-                    <Button variant="danger" onClick={() => handleCancelChild(child)}>
-                      Отменить
                     </Button>
                   )}
                   <Button variant="secondary" onClick={() => openEditChild(child)}>
