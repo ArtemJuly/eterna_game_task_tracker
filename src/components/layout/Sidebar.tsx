@@ -10,11 +10,11 @@ import SidebarPomodoro from './SidebarPomodoro';
 const navItems = [
   { to: '/', label: 'Главная' },
   { to: '/tasks', label: 'Задачи' },
-  { to: '/tracks', label: 'Треки' },
-  { to: '/goal-map', label: 'Карта целей' },
-  { to: '/rewards', label: 'Магазин' },
+  { to: '/tracks', label: 'Треки *' },
+  { to: '/goal-map', label: 'Карта целей *' },
+  { to: '/rewards', label: 'Магазин *' },
   { to: '/time-tracker', label: 'TimeTracker' },
-  { to: '/history', label: 'История' },
+  { to: '/history', label: 'История *' },
   { to: '/settings', label: 'Настройки' },
   { to: '/projects', label: 'Проекты' },
 ];
