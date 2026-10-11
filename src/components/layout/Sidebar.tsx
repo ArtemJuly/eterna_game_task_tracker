@@ -12,6 +12,7 @@ const navItems = [
   { to: '/tracks', label: 'Треки' },
   { to: '/goal-map', label: 'Карта целей' },
   { to: '/rewards', label: 'Магазин' },
+  { to: '/time-tracker', label: 'TimeTracker' },
   { to: '/history', label: 'История' },
   { to: '/settings', label: 'Настройки' },
 ];

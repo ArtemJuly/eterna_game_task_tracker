@@ -6,6 +6,7 @@ import TaskDetail from './pages/TaskDetail';
 import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
 import Rewards from './pages/Rewards';
+import TimeTracker from './pages/TimeTracker';
 import History from './pages/History';
 import Settings from './pages/Settings';
 import Tracks from './pages/Tracks';
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/rewards" element={<Rewards />} />
+          <Route path="/time-tracker" element={<TimeTracker />} />
           <Route path="/tracks" element={<Tracks />} />
           <Route path="/tracks/:id" element={<TrackDetail />} />
           <Route path="/goal-map" element={<GoalMap />} />

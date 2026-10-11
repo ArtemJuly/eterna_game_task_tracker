@@ -10,6 +10,7 @@ import type {
   Reward,
   Settings,
   Task,
+  TimeCategory,
   Track,
   WeekSprint,
 } from '../types';
@@ -56,3 +57,5 @@ export const projectViewModeStore = createStore<'list' | 'board'>(STORAGE_KEYS.p
 export const taskViewModeStore = createStore<'list' | 'board'>(STORAGE_KEYS.taskViewMode, 'list');
 
 export const taskBoardColumnsStore = createStore<BoardColumn[]>(STORAGE_KEYS.taskBoardColumns, []);
+
+export const timeCategoriesStore = createStore<TimeCategory[]>(STORAGE_KEYS.timeCategories, []);

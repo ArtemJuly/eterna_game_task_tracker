@@ -174,3 +174,11 @@ export interface GoalNode {
   completedAt: string | null;
   isActive: boolean;
 }
+
+export interface TimeCategory {
+  id: string;
+  title: string;
+  hours: number;
+  color: string;
+  createdAt: string;
+}
