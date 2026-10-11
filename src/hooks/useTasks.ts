@@ -33,6 +33,7 @@ export interface NewTaskInput {
   trackLinks: TrackLink[];
   boardColumnId: string | null;
   taskBoardColumnId: string | null;
+  timeCategoryIds: string[];
 }
 
 function normalizeTask(t: Task): Task {
@@ -45,6 +46,7 @@ function normalizeTask(t: Task): Task {
     trackLinks: t.trackLinks ?? [],
     boardColumnId: t.boardColumnId ?? null,
     taskBoardColumnId: t.taskBoardColumnId ?? null,
+    timeCategoryIds: t.timeCategoryIds ?? [],
   };
 }
 
@@ -96,6 +98,7 @@ export function useTasks(): {
       trackLinks: input.trackLinks,
       boardColumnId: input.boardColumnId,
       taskBoardColumnId: input.taskBoardColumnId,
+      timeCategoryIds: input.timeCategoryIds,
     };
     setTasks((prev) => [...prev, task]);
   }

@@ -4,6 +4,7 @@ import type { NewTaskInput } from '../hooks/useTasks';
 import { useProjects } from '../hooks/useProjects';
 import { useTasks } from '../hooks/useTasks';
 import { useTracks } from '../hooks/useTracks';
+import { useTimeCategories } from '../hooks/useTimeCategories';
 import { useSettings } from '../hooks/useSettings';
 import { pushToast } from '../hooks/useToast';
 import { isDescendantOf } from '../utils/taskTree';
@@ -54,6 +55,7 @@ export default function TaskModal({
   const { projects } = useProjects();
   const { tasks } = useTasks();
   const { tracks } = useTracks();
+  const { categories: timeCategories } = useTimeCategories();
   const { settings } = useSettings();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -68,6 +70,7 @@ export default function TaskModal({
   const [recurrenceMode, setRecurrenceMode] = useState('none');
   const [customDays, setCustomDays] = useState(3);
   const [trackLinks, setTrackLinks] = useState<TrackLink[]>([]);
+  const [timeCategoryIds, setTimeCategoryIds] = useState<string[]>([]);
   const [pickerTrackId, setPickerTrackId] = useState('');
   const [pickerStageId, setPickerStageId] = useState('');
   const [trackPickerOpen, setTrackPickerOpen] = useState(false);
@@ -90,6 +93,7 @@ export default function TaskModal({
     setRecurrenceMode(modeForInterval(intervalDays));
     if (intervalDays !== null && !PRESET_DAYS.includes(intervalDays)) setCustomDays(intervalDays);
     setTrackLinks(initialTask?.trackLinks ?? []);
+    setTimeCategoryIds(initialTask?.timeCategoryIds ?? []);
     setPickerTrackId('');
     setPickerStageId('');
     setTrackPickerOpen(false);
@@ -211,6 +215,7 @@ export default function TaskModal({
       trackLinks,
       boardColumnId,
       taskBoardColumnId,
+      timeCategoryIds,
     });
     onClose();
   }
@@ -412,6 +417,52 @@ export default function TaskModal({
               + Привязать к треку
             </button>
           )}
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm text-text-muted">Категории TimeTracker</label>
+          {timeCategoryIds.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {timeCategoryIds.map((id) => {
+                const category = timeCategories.find((c) => c.id === id);
+                return (
+                  <span
+                    key={id}
+                    className="inline-flex items-center gap-1.5 rounded-[4px] border border-border bg-overlay/5 px-2 py-1 text-xs text-text-primary"
+                  >
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: category?.color }} />
+                    {category?.title ?? '—'}
+                    <button
+                      type="button"
+                      onClick={() => setTimeCategoryIds((prev) => prev.filter((cid) => cid !== id))}
+                      className="text-text-muted hover:text-danger"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          <select
+            value=""
+            onChange={(e) => {
+              if (e.target.value) setTimeCategoryIds((prev) => [...prev, e.target.value]);
+            }}
+            disabled={timeCategories.filter((c) => !timeCategoryIds.includes(c.id)).length === 0}
+            className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp disabled:opacity-50"
+          >
+            <option value="" disabled>
+              {timeCategories.length === 0 ? 'Нет категорий — создай в TimeTracker' : '+ Выбрать категорию'}
+            </option>
+            {timeCategories
+              .filter((c) => !timeCategoryIds.includes(c.id))
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+          </select>
         </div>
       </form>
     </Modal>

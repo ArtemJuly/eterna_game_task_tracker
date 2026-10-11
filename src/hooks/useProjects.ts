@@ -28,6 +28,7 @@ function normalizeProject(p: Project, fallbackPriority: number): Project {
     priority: p.priority ?? fallbackPriority,
     boardColumns: p.boardColumns ?? [],
     showCompletedTasks: p.showCompletedTasks ?? false,
+    timeCategoryIds: p.timeCategoryIds ?? [],
   };
 }
 
@@ -42,6 +43,7 @@ export function useProjects(): {
   toggleActive: (id: string) => void;
   moveProjectPriority: (id: string, direction: 'up' | 'down') => void;
   reorderProjects: (orderedIds: string[]) => void;
+  setProjectTimeCategories: (id: string, timeCategoryIds: string[]) => void;
   toggleShowCompletedTasks: (id: string) => void;
   addBoardColumn: (projectId: string, title: string) => void;
   renameBoardColumn: (projectId: string, columnId: string, title: string) => void;
@@ -75,6 +77,7 @@ export function useProjects(): {
       priority,
       boardColumns: [],
       showCompletedTasks: false,
+      timeCategoryIds: [],
     };
     setProjects((prev) => [...prev, project]);
   }
@@ -236,6 +239,10 @@ export function useProjects(): {
     );
   }
 
+  function setProjectTimeCategories(id: string, timeCategoryIds: string[]) {
+    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, timeCategoryIds } : p)));
+  }
+
   function reorderProjects(orderedIds: string[]) {
     const priorityById = new Map(orderedIds.map((id, index) => [id, index]));
     setProjects((prev) => prev.map((p) => (priorityById.has(p.id) ? { ...p, priority: priorityById.get(p.id)! } : p)));
@@ -252,6 +259,7 @@ export function useProjects(): {
     toggleActive,
     moveProjectPriority,
     reorderProjects,
+    setProjectTimeCategories,
     toggleShowCompletedTasks,
     addBoardColumn,
     renameBoardColumn,

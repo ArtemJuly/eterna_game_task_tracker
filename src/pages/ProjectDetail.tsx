@@ -4,6 +4,7 @@ import { useProjects } from '../hooks/useProjects';
 import { useTasks } from '../hooks/useTasks';
 import type { NewTaskInput } from '../hooks/useTasks';
 import { usePomodoros } from '../hooks/usePomodoros';
+import { useTimeCategories } from '../hooks/useTimeCategories';
 import { useConfirm } from '../hooks/useConfirm';
 import type { Project, Task } from '../types';
 import { getDirectChildren } from '../utils/taskTree';
@@ -41,10 +42,12 @@ export default function ProjectDetail() {
     toggleSprint,
     toggleActive,
     toggleShowCompletedTasks,
+    setProjectTimeCategories,
   } = useProjects();
   const { tasks, addTask, updateTask, startTask, completeTask, cancelTask, setTaskStatus, deleteTask, toggleFocus } =
     useTasks();
   const { sessions } = usePomodoros();
+  const { categories: timeCategories } = useTimeCategories();
   const { confirm, dialog } = useConfirm();
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
@@ -187,6 +190,53 @@ export default function ProjectDetail() {
               <p className="mt-1 text-sm text-text-muted tabular-nums">
                 Награда за проект: {project.xp} XP · {project.eternas} ✦
               </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                {project.timeCategoryIds.map((id) => {
+                  const category = timeCategories.find((c) => c.id === id);
+                  return (
+                    <span
+                      key={id}
+                      className="inline-flex items-center gap-1.5 rounded-[4px] border border-border bg-overlay/5 px-2 py-1 text-xs text-text-primary"
+                    >
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: category?.color }} />
+                      {category?.title ?? '—'}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setProjectTimeCategories(
+                            project.id,
+                            project.timeCategoryIds.filter((cid) => cid !== id),
+                          )
+                        }
+                        className="text-text-muted hover:text-danger"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  );
+                })}
+                <select
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setProjectTimeCategories(project.id, [...project.timeCategoryIds, e.target.value]);
+                    }
+                  }}
+                  disabled={timeCategories.filter((c) => !project.timeCategoryIds.includes(c.id)).length === 0}
+                  className="rounded border border-border bg-bg px-2 py-1 text-xs text-text-primary outline-none focus:border-accent-xp disabled:opacity-50"
+                >
+                  <option value="" disabled>
+                    {timeCategories.length === 0 ? 'Нет категорий TimeTracker' : '+ Категория TimeTracker'}
+                  </option>
+                  {timeCategories
+                    .filter((c) => !project.timeCategoryIds.includes(c.id))
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.title}
+                      </option>
+                    ))}
+                </select>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">

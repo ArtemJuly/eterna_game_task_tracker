@@ -1,32 +1,79 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTimeCategories } from '../hooks/useTimeCategories';
+import { useTimeEntries } from '../hooks/useTimeEntries';
+import { useTasks } from '../hooks/useTasks';
+import { useProjects } from '../hooks/useProjects';
+import { usePomodoros } from '../hooks/usePomodoros';
 import { useConfirm } from '../hooks/useConfirm';
+import { getTodayDateString } from '../utils/today';
+import {
+  TIME_RANGE_OPTIONS,
+  buildTimeReport,
+  formatMinutesAsHours,
+  getRangeStartDate,
+  type TimeRangeKey,
+} from '../utils/timeTracker';
 import Button from '../components/ui/Button';
 import DonutChart from '../components/ui/DonutChart';
 
 export default function TimeTracker() {
-  const { categories, addCategory, renameCategory, setCategoryHours, deleteCategory } = useTimeCategories();
+  const { categories, addCategory, renameCategory, deleteCategory } = useTimeCategories();
+  const { entries, addEntry, deleteEntry } = useTimeEntries();
+  const { tasks } = useTasks();
+  const { projects } = useProjects();
+  const { sessions } = usePomodoros();
   const { confirm, dialog } = useConfirm();
-  const [addingCategory, setAddingCategory] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newHours, setNewHours] = useState('0');
 
-  const totalHours = categories.reduce((sum, c) => sum + c.hours, 0);
-  const maxHours = Math.max(1, ...categories.map((c) => c.hours));
+  const [range, setRange] = useState<TimeRangeKey>('week');
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategoryTitle, setNewCategoryTitle] = useState('');
+  const [addingEntry, setAddingEntry] = useState(false);
+  const [entryCategoryId, setEntryCategoryId] = useState('');
+  const [entryDate, setEntryDate] = useState(getTodayDateString());
+  const [entryHours, setEntryHours] = useState('1');
+  const [entryNote, setEntryNote] = useState('');
+
+  const report = useMemo(
+    () => buildTimeReport(categories, entries, sessions, tasks, projects, range),
+    [categories, entries, sessions, tasks, projects, range],
+  );
+  const reportByCategory = useMemo(() => new Map(report.map((r) => [r.categoryId, r])), [report]);
+
+  const totalMinutes = report.reduce((sum, r) => sum + r.totalMinutes, 0);
+  const totalPomodoroMinutes = report.reduce((sum, r) => sum + r.pomodoroMinutes, 0);
+  const maxMinutes = Math.max(1, ...report.map((r) => r.totalMinutes));
+
+  const today = getTodayDateString();
+  const rangeEntries = useMemo(() => {
+    const start = getRangeStartDate(range, today);
+    return entries
+      .filter((e) => (start === null ? true : e.date >= start) && e.date <= today)
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [entries, range, today]);
 
   function submitNewCategory(e: React.FormEvent) {
     e.preventDefault();
-    if (!newTitle.trim()) return;
-    addCategory(newTitle.trim(), Number(newHours) || 0);
-    setNewTitle('');
-    setNewHours('0');
+    if (!newCategoryTitle.trim()) return;
+    addCategory(newCategoryTitle.trim());
+    setNewCategoryTitle('');
     setAddingCategory(false);
   }
 
-  function handleDelete(id: string, title: string) {
+  function submitNewEntry(e: React.FormEvent) {
+    e.preventDefault();
+    if (!entryCategoryId || !entryDate) return;
+    const hours = Number(entryHours);
+    if (!hours || hours <= 0) return;
+    addEntry({ categoryId: entryCategoryId, date: entryDate, durationMinutes: Math.round(hours * 60), note: entryNote.trim() });
+    setEntryHours('1');
+    setEntryNote('');
+    setAddingEntry(false);
+  }
+
+  function handleDeleteCategory(id: string, title: string) {
     confirm({
       title: 'Удалить категорию?',
-      message: `«${title}» будет удалена без возможности восстановления.`,
+      message: `«${title}» будет удалена, а записи времени в ней — вместе с ней. Теги у задач и проектов тоже снимутся.`,
       confirmLabel: 'Удалить',
       danger: true,
       onConfirm: () => deleteCategory(id),
@@ -35,16 +82,35 @@ export default function TimeTracker() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-text-primary">TimeTracker</h1>
-        <Button variant="primary" onClick={() => setAddingCategory(true)}>
-          + Категория
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
+            {TIME_RANGE_OPTIONS.map((o) => (
+              <button
+                key={o.key}
+                onClick={() => setRange(o.key)}
+                className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                  range === o.key ? 'bg-overlay/[0.06] text-text-primary' : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <Button variant="secondary" onClick={() => setAddingEntry(true)}>
+            + Запись
+          </Button>
+          <Button variant="primary" onClick={() => setAddingCategory(true)}>
+            + Категория
+          </Button>
+        </div>
       </div>
 
       {categories.length === 0 && !addingCategory ? (
         <div className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
-          Пока нет категорий. Добавь первую, чтобы начать учитывать время.
+          Пока нет категорий. Добавь первую — её можно будет присвоить задачам и проектам как тег, а сюда будет
+          стекаться время из помидоров и ручных записей.
         </div>
       ) : (
         <>
@@ -52,41 +118,55 @@ export default function TimeTracker() {
             <div className="flex flex-col items-center gap-4 rounded-lg border border-border bg-surface p-5">
               <h2 className="self-start text-sm font-semibold text-text-muted">Доля времени, %</h2>
               <DonutChart
-                segments={categories.map((c) => ({ id: c.id, label: c.title, value: c.hours, color: c.color }))}
+                segments={report.map((r) => {
+                  const c = categories.find((cat) => cat.id === r.categoryId)!;
+                  return { id: c.id, label: c.title, value: r.totalMinutes, color: c.color };
+                })}
               />
               <div className="flex w-full flex-col gap-1.5">
-                {categories.map((c) => (
-                  <div key={c.id} className="flex items-center gap-2 text-sm">
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: c.color }} />
-                    <span className="flex-1 truncate text-text-primary">{c.title}</span>
-                    <span className="tabular-nums text-text-muted">
-                      {totalHours > 0 ? Math.round((c.hours / totalHours) * 1000) / 10 : 0}%
-                    </span>
-                  </div>
-                ))}
+                {categories.map((c) => {
+                  const r = reportByCategory.get(c.id);
+                  const minutes = r?.totalMinutes ?? 0;
+                  return (
+                    <div key={c.id} className="flex items-center gap-2 text-sm">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: c.color }} />
+                      <span className="flex-1 truncate text-text-primary">{c.title}</span>
+                      <span className="tabular-nums text-text-muted">
+                        {totalMinutes > 0 ? Math.round((minutes / totalMinutes) * 1000) / 10 : 0}%
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-5">
               <h2 className="text-sm font-semibold text-text-muted">Часы по категориям</h2>
               <div className="flex flex-col gap-3">
-                {categories.map((c) => (
-                  <div key={c.id} className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="truncate text-text-primary">{c.title}</span>
-                      <span className="tabular-nums text-text-muted">{c.hours} ч</span>
+                {categories.map((c) => {
+                  const r = reportByCategory.get(c.id);
+                  const minutes = r?.totalMinutes ?? 0;
+                  return (
+                    <div key={c.id} className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="truncate text-text-primary">{c.title}</span>
+                        <span className="tabular-nums text-text-muted">{formatMinutesAsHours(minutes)} ч</span>
+                      </div>
+                      <div className="h-2.5 w-full overflow-hidden rounded-full bg-overlay/5">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${(minutes / maxMinutes) * 100}%`, backgroundColor: c.color }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-overlay/5">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{ width: `${(c.hours / maxHours) * 100}%`, backgroundColor: c.color }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <div className="mt-2 border-t border-border pt-3 text-sm text-text-muted">
-                Всего: <span className="font-semibold text-text-primary tabular-nums">{totalHours} ч</span>
+                Всего: <span className="font-semibold text-text-primary tabular-nums">{formatMinutesAsHours(totalMinutes)} ч</span>
+                {totalPomodoroMinutes > 0 && (
+                  <span> · из них {formatMinutesAsHours(totalPomodoroMinutes)} ч из помидоров</span>
+                )}
               </div>
             </div>
           </div>
@@ -97,50 +177,99 @@ export default function TimeTracker() {
                 <tr className="border-b border-border text-left text-text-muted">
                   <th className="w-8 px-4 py-2"></th>
                   <th className="px-2 py-2 font-medium">Категория</th>
-                  <th className="w-32 px-4 py-2 font-medium">Часы</th>
+                  <th className="w-28 px-4 py-2 font-medium">Часы</th>
                   <th className="w-20 px-4 py-2 font-medium">%</th>
                   <th className="w-10 px-4 py-2"></th>
                 </tr>
               </thead>
               <tbody>
-                {categories.map((c) => (
-                  <tr key={c.id} className="border-b border-border last:border-0">
-                    <td className="px-4 py-2">
-                      <span className="block h-3 w-3 rounded-full" style={{ backgroundColor: c.color }} />
-                    </td>
-                    <td className="px-2 py-2">
-                      <input
-                        value={c.title}
-                        onChange={(e) => renameCategory(c.id, e.target.value)}
-                        className="w-full rounded border border-transparent bg-transparent px-1 py-1 text-text-primary outline-none hover:border-border focus:border-accent-xp"
-                      />
-                    </td>
-                    <td className="px-4 py-2">
-                      <input
-                        type="number"
-                        min={0}
-                        value={c.hours}
-                        onChange={(e) => setCategoryHours(c.id, Number(e.target.value) || 0)}
-                        className="w-24 rounded border border-border bg-bg px-2 py-1 text-text-primary tabular-nums outline-none focus:border-accent-xp"
-                      />
-                    </td>
-                    <td className="px-4 py-2 tabular-nums text-text-muted">
-                      {totalHours > 0 ? Math.round((c.hours / totalHours) * 1000) / 10 : 0}%
-                    </td>
-                    <td className="px-4 py-2">
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(c.id, c.title)}
-                        className="text-text-muted hover:text-danger"
-                        title="Удалить категорию"
-                      >
-                        ✕
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {categories.map((c) => {
+                  const r = reportByCategory.get(c.id);
+                  const minutes = r?.totalMinutes ?? 0;
+                  return (
+                    <tr key={c.id} className="border-b border-border last:border-0">
+                      <td className="px-4 py-2">
+                        <span className="block h-3 w-3 rounded-full" style={{ backgroundColor: c.color }} />
+                      </td>
+                      <td className="px-2 py-2">
+                        <input
+                          value={c.title}
+                          onChange={(e) => renameCategory(c.id, e.target.value)}
+                          className="w-full rounded border border-transparent bg-transparent px-1 py-1 text-text-primary outline-none hover:border-border focus:border-accent-xp"
+                        />
+                      </td>
+                      <td className="px-4 py-2 tabular-nums text-text-primary">{formatMinutesAsHours(minutes)} ч</td>
+                      <td className="px-4 py-2 tabular-nums text-text-muted">
+                        {totalMinutes > 0 ? Math.round((minutes / totalMinutes) * 1000) / 10 : 0}%
+                      </td>
+                      <td className="px-4 py-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCategory(c.id, c.title)}
+                          className="text-text-muted hover:text-danger"
+                          title="Удалить категорию"
+                        >
+                          ✕
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+
+          <div>
+            <h2 className="mb-2 text-sm font-semibold text-text-muted">Ручные записи за период</h2>
+            {rangeEntries.length === 0 ? (
+              <div className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+                Записей нет — часы из помидоров подтягиваются автоматически, а вручную пока ничего не внесено.
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-lg border border-border bg-surface">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-text-muted">
+                      <th className="px-4 py-2 font-medium">Дата</th>
+                      <th className="px-4 py-2 font-medium">Категория</th>
+                      <th className="px-2 py-2 font-medium">Заметка</th>
+                      <th className="w-20 px-4 py-2 font-medium">Часы</th>
+                      <th className="w-10 px-4 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rangeEntries.map((entry) => {
+                      const category = categories.find((c) => c.id === entry.categoryId);
+                      return (
+                        <tr key={entry.id} className="border-b border-border last:border-0">
+                          <td className="px-4 py-2 tabular-nums text-text-muted">{entry.date}</td>
+                          <td className="px-4 py-2">
+                            <span className="inline-flex items-center gap-1.5 text-text-primary">
+                              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: category?.color }} />
+                              {category?.title ?? '—'}
+                            </span>
+                          </td>
+                          <td className="px-2 py-2 text-text-muted">{entry.note || '—'}</td>
+                          <td className="px-4 py-2 tabular-nums text-text-primary">
+                            {formatMinutesAsHours(entry.durationMinutes)} ч
+                          </td>
+                          <td className="px-4 py-2">
+                            <button
+                              type="button"
+                              onClick={() => deleteEntry(entry.id)}
+                              className="text-text-muted hover:text-danger"
+                              title="Удалить запись"
+                            >
+                              ✕
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -154,20 +283,10 @@ export default function TimeTracker() {
             <label className="text-xs text-text-muted">Название категории</label>
             <input
               autoFocus
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
+              value={newCategoryTitle}
+              onChange={(e) => setNewCategoryTitle(e.target.value)}
               placeholder="Например, Работа"
               className="w-56 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-text-muted">Часы</label>
-            <input
-              type="number"
-              min={0}
-              value={newHours}
-              onChange={(e) => setNewHours(e.target.value)}
-              className="w-28 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary tabular-nums outline-none focus:border-accent-xp"
             />
           </div>
           <div className="flex gap-2">
@@ -175,6 +294,69 @@ export default function TimeTracker() {
               Отмена
             </Button>
             <Button type="submit" variant="primary">
+              Добавить
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {addingEntry && (
+        <form
+          onSubmit={submitNewEntry}
+          className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-4"
+        >
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-text-muted">Категория</label>
+            <select
+              autoFocus
+              value={entryCategoryId}
+              onChange={(e) => setEntryCategoryId(e.target.value)}
+              className="w-44 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+            >
+              <option value="" disabled>
+                Выбрать категорию
+              </option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-text-muted">Дата</label>
+            <input
+              type="date"
+              value={entryDate}
+              onChange={(e) => setEntryDate(e.target.value)}
+              className="rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-text-muted">Часы</label>
+            <input
+              type="number"
+              min={0}
+              step={0.25}
+              value={entryHours}
+              onChange={(e) => setEntryHours(e.target.value)}
+              className="w-24 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary tabular-nums outline-none focus:border-accent-xp"
+            />
+          </div>
+          <div className="flex flex-1 flex-col gap-1">
+            <label className="text-xs text-text-muted">Заметка (необязательно)</label>
+            <input
+              value={entryNote}
+              onChange={(e) => setEntryNote(e.target.value)}
+              placeholder="Чем занимался"
+              className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" onClick={() => setAddingEntry(false)}>
+              Отмена
+            </Button>
+            <Button type="submit" variant="primary" disabled={!entryCategoryId}>
               Добавить
             </Button>
           </div>

@@ -29,6 +29,7 @@ export interface Task {
   trackLinks: TrackLink[];
   boardColumnId: string | null;
   taskBoardColumnId: string | null;
+  timeCategoryIds: string[];
 }
 
 export type ProjectStatus = 'active' | 'done';
@@ -53,6 +54,7 @@ export interface Project {
   priority: number;
   boardColumns: BoardColumn[];
   showCompletedTasks: boolean;
+  timeCategoryIds: string[];
 }
 
 export type RewardStatus = 'wanted' | 'saving' | 'available' | 'purchased' | 'cancelled';
@@ -178,7 +180,15 @@ export interface GoalNode {
 export interface TimeCategory {
   id: string;
   title: string;
-  hours: number;
   color: string;
+  createdAt: string;
+}
+
+export interface TimeEntry {
+  id: string;
+  categoryId: string;
+  date: string;
+  durationMinutes: number;
+  note: string;
   createdAt: string;
 }
