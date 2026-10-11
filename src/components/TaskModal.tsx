@@ -111,6 +111,9 @@ export default function TaskModal({
   const availableTracks = tracks.filter((t) => !trackLinks.some((l) => l.trackId === t.id));
   const pickerStages = tracks.find((t) => t.id === pickerTrackId)?.stages ?? [];
 
+  const selectedProjectTimeCategoryIds = projects.find((p) => p.id === projectId)?.timeCategoryIds ?? [];
+  const inheritedCategories = timeCategories.filter((c) => selectedProjectTimeCategoryIds.includes(c.id));
+
   function addTrackLink() {
     if (!pickerTrackId || !pickerStageId) return;
     setTrackLinks((prev) => [...prev, { trackId: pickerTrackId, stageId: pickerStageId }]);
@@ -421,6 +424,12 @@ export default function TaskModal({
 
         <div>
           <label className="mb-1 block text-sm text-text-muted">Категории TimeTracker</label>
+          {timeCategoryIds.length === 0 && inheritedCategories.length > 0 && (
+            <p className="mb-2 text-xs text-text-muted">
+              Пока без своих категорий — унаследует от проекта:{' '}
+              {inheritedCategories.map((c) => c.title).join(', ')}
+            </p>
+          )}
           {timeCategoryIds.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {timeCategoryIds.map((id) => {

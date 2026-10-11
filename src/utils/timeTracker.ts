@@ -28,22 +28,25 @@ function isDateInRange(date: string, start: string | null, end: string): boolean
   return start === null || date >= start;
 }
 
-// A pomodoro's time counts toward its task's own category tags, plus (if it has a
-// project) that project's tags too — tags aren't mutually exclusive, so no splitting.
+// A task with no categories of its own inherits its project's categories by default —
+// its own tags, once set, fully take over (no merging with the project's).
+export function getEffectiveTaskCategoryIds(task: Task, projects: Project[]): string[] {
+  if (task.timeCategoryIds.length > 0) return task.timeCategoryIds;
+  if (!task.projectId) return [];
+  const project = projects.find((p) => p.id === task.projectId);
+  return project?.timeCategoryIds ?? [];
+}
+
 export function getPomodoroCategoryIds(session: PomodoroSession, tasks: Task[], projects: Project[]): string[] {
-  const ids = new Set<string>();
   if (session.taskId) {
     const task = tasks.find((t) => t.id === session.taskId);
-    if (task) {
-      task.timeCategoryIds.forEach((id) => ids.add(id));
-      const project = task.projectId ? projects.find((p) => p.id === task.projectId) : undefined;
-      project?.timeCategoryIds.forEach((id) => ids.add(id));
-    }
-  } else if (session.projectId) {
-    const project = projects.find((p) => p.id === session.projectId);
-    project?.timeCategoryIds.forEach((id) => ids.add(id));
+    return task ? getEffectiveTaskCategoryIds(task, projects) : [];
   }
-  return [...ids];
+  if (session.projectId) {
+    const project = projects.find((p) => p.id === session.projectId);
+    return project?.timeCategoryIds ?? [];
+  }
+  return [];
 }
 
 export interface TimeCategoryReport {
