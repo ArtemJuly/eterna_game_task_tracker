@@ -118,7 +118,9 @@ export function useProjects(): {
 
     pausePomodoroIfRunningForProject(id);
     const completedAt = new Date().toISOString();
-    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, status: 'done', completedAt } : p)));
+    setProjects((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status: 'done', completedAt, isSprint: false } : p)),
+    );
 
     characterStore.set((prev) => ({
       totalXp: prev.totalXp + project.xp,
@@ -162,7 +164,9 @@ export function useProjects(): {
       return;
     }
 
-    const sprintCount = projects.filter((p) => p.isSprint).length;
+    // Only active projects count toward the cap — a finished project keeps isSprint
+    // around as history, but shouldn't keep occupying one of the 3 slots.
+    const sprintCount = projects.filter((p) => p.isSprint && p.status !== 'done').length;
     if (sprintCount >= MAX_SPRINT_PROJECTS) {
       pushToast('Уже выбрано 3 проекта-спринта — снимите отметку с одного, чтобы выбрать другой', 'error');
       return;
