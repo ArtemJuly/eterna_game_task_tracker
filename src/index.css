@@ -42,6 +42,20 @@
   --overlay: #000000;
 }
 
+/* Серо-белая тема: нейтральный светлый фон, как в Todoist */
+:root[data-theme='gray-white'] {
+  --bg: #f7f7f8;
+  --surface: #ffffff;
+  --border: #e4e4e7;
+  --text-primary: #27272a;
+  --text-muted: #8a8a94;
+  --accent-xp: #6366f1;
+  --accent-eternas: #f59e0b;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --overlay: #000000;
+}
+
 @theme {
   --color-bg: #0f1117;
   --color-surface: #181c25;
@@ -77,6 +91,19 @@
   --color-text-muted: #8f8470;
   --color-accent-xp: #8a6a16;
   --color-accent-eternas: #b8860b;
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
+  --color-overlay: #000000;
+}
+
+:root[data-theme='gray-white'] {
+  --color-bg: #f7f7f8;
+  --color-surface: #ffffff;
+  --color-border: #e4e4e7;
+  --color-text-primary: #27272a;
+  --color-text-muted: #8a8a94;
+  --color-accent-xp: #6366f1;
+  --color-accent-eternas: #f59e0b;
   --color-success: #16a34a;
   --color-danger: #dc2626;
   --color-overlay: #000000;

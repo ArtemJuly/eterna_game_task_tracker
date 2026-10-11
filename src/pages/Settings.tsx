@@ -19,6 +19,7 @@ const THEME_OPTIONS: { value: ThemeName; label: string; bg: string; surface: str
   { value: 'dark', label: 'Тёмная (по умолчанию)', bg: '#0f1117', surface: '#181c25', accent: '#7c6ff7' },
   { value: 'black-gold', label: 'Чёрно-золотая', bg: '#0a0a0a', surface: '#161514', accent: '#e8c468' },
   { value: 'white-gold', label: 'Бело-золотая', bg: '#faf7ef', surface: '#ffffff', accent: '#b8860b' },
+  { value: 'gray-white', label: 'Серо-белая', bg: '#f7f7f8', surface: '#ffffff', accent: '#6366f1' },
 ];
 
 export default function Settings() {
@@ -208,7 +209,7 @@ export default function Settings() {
 
       <section className="rounded-lg border border-border bg-surface p-5">
         <h2 className="mb-3 text-lg font-semibold text-text-primary">Оформление</h2>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {THEME_OPTIONS.map((opt) => (
             <button
               key={opt.value}

@@ -105,7 +105,7 @@ export interface ActivePomodoro {
   remainingMs: number | null;
 }
 
-export type ThemeName = 'dark' | 'black-gold' | 'white-gold';
+export type ThemeName = 'dark' | 'black-gold' | 'white-gold' | 'gray-white';
 
 export interface Settings {
   pomodoroDurationMinutes: number;
