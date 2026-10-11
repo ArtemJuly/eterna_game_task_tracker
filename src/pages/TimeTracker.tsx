@@ -10,7 +10,9 @@ import {
   TIME_RANGE_OPTIONS,
   buildTimeReport,
   formatMinutesAsHours,
+  getPomodoroTimeEntries,
   getRangeStartDate,
+  isDateInRange,
   type TimeRangeKey,
 } from '../utils/timeTracker';
 import Button from '../components/ui/Button';
@@ -44,12 +46,40 @@ export default function TimeTracker() {
   const maxMinutes = Math.max(1, ...report.map((r) => r.totalMinutes));
 
   const today = getTodayDateString();
-  const rangeEntries = useMemo(() => {
+
+  interface DisplayRow {
+    id: string;
+    date: string;
+    categoryId: string;
+    durationMinutes: number;
+    note: string;
+    source: 'manual' | 'pomodoro';
+  }
+
+  const combinedRows = useMemo<DisplayRow[]>(() => {
     const start = getRangeStartDate(range, today);
-    return entries
-      .filter((e) => (start === null ? true : e.date >= start) && e.date <= today)
-      .sort((a, b) => b.date.localeCompare(a.date));
-  }, [entries, range, today]);
+    const manualRows: DisplayRow[] = entries
+      .filter((e) => isDateInRange(e.date, start, today))
+      .map((e) => ({
+        id: e.id,
+        date: e.date,
+        categoryId: e.categoryId,
+        durationMinutes: e.durationMinutes,
+        note: e.note,
+        source: 'manual',
+      }));
+    const pomodoroRows: DisplayRow[] = getPomodoroTimeEntries(sessions, tasks, projects)
+      .filter((p) => isDateInRange(p.date, start, today))
+      .map((p) => ({
+        id: p.id,
+        date: p.date,
+        categoryId: p.categoryId,
+        durationMinutes: p.durationMinutes,
+        note: `🍅 ${p.label}`,
+        source: 'pomodoro',
+      }));
+    return [...manualRows, ...pomodoroRows].sort((a, b) => b.date.localeCompare(a.date));
+  }, [entries, sessions, tasks, projects, range, today]);
 
   function submitNewCategory(e: React.FormEvent) {
     e.preventDefault();
@@ -220,10 +250,10 @@ export default function TimeTracker() {
           </div>
 
           <div>
-            <h2 className="mb-2 text-sm font-semibold text-text-muted">Ручные записи за период</h2>
-            {rangeEntries.length === 0 ? (
+            <h2 className="mb-2 text-sm font-semibold text-text-muted">Записи за период</h2>
+            {combinedRows.length === 0 ? (
               <div className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
-                Записей нет — часы из помидоров подтягиваются автоматически, а вручную пока ничего не внесено.
+                Записей нет — тут появятся завершённые помидоры с подходящей категорией и записи, внесённые вручную.
               </div>
             ) : (
               <div className="overflow-hidden rounded-lg border border-border bg-surface">
@@ -238,30 +268,32 @@ export default function TimeTracker() {
                     </tr>
                   </thead>
                   <tbody>
-                    {rangeEntries.map((entry) => {
-                      const category = categories.find((c) => c.id === entry.categoryId);
+                    {combinedRows.map((row) => {
+                      const category = categories.find((c) => c.id === row.categoryId);
                       return (
-                        <tr key={entry.id} className="border-b border-border last:border-0">
-                          <td className="px-4 py-2 tabular-nums text-text-muted">{entry.date}</td>
+                        <tr key={row.id} className="border-b border-border last:border-0">
+                          <td className="px-4 py-2 tabular-nums text-text-muted">{row.date}</td>
                           <td className="px-4 py-2">
                             <span className="inline-flex items-center gap-1.5 text-text-primary">
                               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: category?.color }} />
                               {category?.title ?? '—'}
                             </span>
                           </td>
-                          <td className="px-2 py-2 text-text-muted">{entry.note || '—'}</td>
+                          <td className="px-2 py-2 text-text-muted">{row.note || '—'}</td>
                           <td className="px-4 py-2 tabular-nums text-text-primary">
-                            {formatMinutesAsHours(entry.durationMinutes)} ч
+                            {formatMinutesAsHours(row.durationMinutes)} ч
                           </td>
                           <td className="px-4 py-2">
-                            <button
-                              type="button"
-                              onClick={() => deleteEntry(entry.id)}
-                              className="text-text-muted hover:text-danger"
-                              title="Удалить запись"
-                            >
-                              ✕
-                            </button>
+                            {row.source === 'manual' && (
+                              <button
+                                type="button"
+                                onClick={() => deleteEntry(row.id)}
+                                className="text-text-muted hover:text-danger"
+                                title="Удалить запись"
+                              >
+                                ✕
+                              </button>
+                            )}
                           </td>
                         </tr>
                       );

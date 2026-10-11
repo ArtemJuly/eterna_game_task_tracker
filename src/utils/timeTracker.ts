@@ -23,7 +23,7 @@ export function getRangeStartDate(range: TimeRangeKey, today: string): string | 
   }
 }
 
-function isDateInRange(date: string, start: string | null, end: string): boolean {
+export function isDateInRange(date: string, start: string | null, end: string): boolean {
   if (date > end) return false;
   return start === null || date >= start;
 }
@@ -88,6 +88,41 @@ export function buildTimeReport(
     const pomodoroMinutes = pomodoroByCategory.get(c.id) ?? 0;
     return { categoryId: c.id, manualMinutes, pomodoroMinutes, totalMinutes: manualMinutes + pomodoroMinutes };
   });
+}
+
+export interface PomodoroTimeEntry {
+  id: string;
+  categoryId: string;
+  date: string;
+  durationMinutes: number;
+  label: string;
+}
+
+// One row per (completed pomodoro, matching category) — a session tagged with two
+// categories shows up once under each, same accounting as the category totals.
+export function getPomodoroTimeEntries(
+  sessions: PomodoroSession[],
+  tasks: Task[],
+  projects: Project[],
+): PomodoroTimeEntry[] {
+  const result: PomodoroTimeEntry[] = [];
+  for (const s of sessions) {
+    if (s.status !== 'completed') continue;
+    const categoryIds = getPomodoroCategoryIds(s, tasks, projects);
+    if (categoryIds.length === 0) continue;
+
+    const label = s.taskId
+      ? (tasks.find((t) => t.id === s.taskId)?.title ?? 'Задача удалена')
+      : s.projectId
+        ? (projects.find((p) => p.id === s.projectId)?.title ?? 'Проект удалён')
+        : '';
+    const date = s.endedAt.slice(0, 10);
+
+    for (const categoryId of categoryIds) {
+      result.push({ id: `${s.id}-${categoryId}`, categoryId, date, durationMinutes: s.durationMinutes, label });
+    }
+  }
+  return result;
 }
 
 export function formatMinutesAsHours(minutes: number): string {
