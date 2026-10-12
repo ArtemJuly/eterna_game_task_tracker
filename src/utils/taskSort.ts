@@ -8,9 +8,10 @@ export const TASK_SORT_OPTIONS: { key: TaskSortMode; label: string }[] = [
 ];
 
 function effectiveDueDate(task: Task): string | null {
-  if (task.dueDate !== null) return task.dueDate;
+  // A recurring task's own dueDate freezes at whatever it was set to when the task
+  // was created — nextDueDate is the field that actually advances each cycle.
   if (task.recurrenceIntervalDays !== null) return task.nextDueDate;
-  return null;
+  return task.dueDate;
 }
 
 function daysBetween(fromStr: string, toStr: string): number {

@@ -81,7 +81,9 @@ export default function Dashboard() {
   const todayTasks = tasks
     .filter((t) => t.status === 'planned' || t.status === 'in_progress')
     .filter((t) => {
-      const effectiveDue = t.dueDate ?? (t.recurrenceIntervalDays !== null ? t.nextDueDate : null);
+      // A recurring task's own dueDate freezes at creation time — nextDueDate is what
+      // actually advances each cycle, so it must win for recurring tasks.
+      const effectiveDue = t.recurrenceIntervalDays !== null ? t.nextDueDate : t.dueDate;
       return t.focusDate === today || effectiveDue === today || dayPlanTaskIds.has(t.id);
     })
     .sort((a, b) => compareTasks(a, b, 'urgency', today, dayPlanTaskIds));

@@ -8,9 +8,10 @@ export const RECURRENCE_PRESETS: { label: string; days: number }[] = [
 
 export function isTaskOverdue(task: Task, today: string): boolean {
   if (task.status === 'done' || task.status === 'cancelled') return false;
-  if (task.recurrenceIntervalDays !== null && task.nextDueDate !== null && task.nextDueDate < today) return true;
-  if (task.dueDate !== null && task.dueDate < today) return true;
-  return false;
+  // A recurring task's own dueDate freezes at whatever it was set to when the task was
+  // created, so it must not keep flagging the task overdue once nextDueDate has moved on.
+  if (task.recurrenceIntervalDays !== null) return task.nextDueDate !== null && task.nextDueDate < today;
+  return task.dueDate !== null && task.dueDate < today;
 }
 
 export function formatRecurrence(intervalDays: number): string {
