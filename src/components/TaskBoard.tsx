@@ -10,6 +10,8 @@ import Button from './ui/Button';
 import Badge from './ui/Badge';
 import TaskDueDateControl from './TaskDueDateControl';
 import TaskProjectSelect from './TaskProjectSelect';
+import TaskStatusSelect from './TaskStatusSelect';
+import TaskCardMenu from './TaskCardMenu';
 import TaskModal from './TaskModal';
 import type { NewTaskInput } from '../hooks/useTasks';
 
@@ -57,6 +59,7 @@ export default function TaskBoard({ tasks, projects }: TaskBoardProps) {
   const [renameValue, setRenameValue] = useState('');
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [createInColumnId, setCreateInColumnId] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
 
@@ -97,12 +100,22 @@ export default function TaskBoard({ tasks, projects }: TaskBoardProps) {
   }
 
   function openCreateTask(columnId: string | null) {
+    setEditingTask(null);
     setCreateInColumnId(columnId);
     setTaskModalOpen(true);
   }
 
+  function openEditTask(task: Task) {
+    setEditingTask(task);
+    setTaskModalOpen(true);
+  }
+
   function handleTaskSubmit(input: NewTaskInput) {
-    addTask(input);
+    if (editingTask) {
+      updateTask(editingTask.id, input);
+    } else {
+      addTask(input);
+    }
   }
 
   function handleDeleteTask(task: Task) {
@@ -207,7 +220,7 @@ export default function TaskBoard({ tasks, projects }: TaskBoardProps) {
                         setDraggedTaskId(null);
                         setDragOverColumnId(null);
                       }}
-                      className={`group flex min-w-0 cursor-grab flex-col gap-1.5 overflow-hidden rounded-xl border border-border/60 bg-surface p-3 shadow-sm active:cursor-grabbing ${
+                      className={`group flex min-w-0 cursor-grab flex-col gap-1.5 rounded-xl border border-border/60 bg-surface p-3 shadow-sm active:cursor-grabbing ${
                         draggedTaskId === task.id ? 'opacity-40' : ''
                       }`}
                     >
@@ -215,45 +228,49 @@ export default function TaskBoard({ tasks, projects }: TaskBoardProps) {
                         <TaskDoneCircle done={isTerminal} onToggle={() => toggleTaskDone(task)} />
                         <Link
                           to={`/tasks/${task.id}`}
-                          className={`min-w-0 flex-1 break-words text-sm font-medium hover:underline ${
+                          className={`min-w-0 flex-1 break-words text-sm font-normal hover:underline ${
                             isTerminal ? 'text-text-muted line-through' : 'text-text-primary'
                           }`}
                         >
                           {task.title}
                         </Link>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteTask(task)}
-                          className="shrink-0 text-xs text-text-muted opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                      <div className="flex min-w-0 flex-wrap items-center gap-1.5 pl-7">
-                        <TaskProjectSelect
-                          projectId={task.projectId}
-                          projects={projects}
-                          onChange={(projectId) => updateTask(task.id, { projectId })}
-                        />
-                        <TaskDueDateControl task={task} onUpdate={(patch) => updateTask(task.id, patch)} />
-                        {task.streakCount > 0 && <Badge tone="eternas">🔥 ×{task.streakCount}</Badge>}
-                        {getStreakStars(task.streakCount) > 0 && (
-                          <Badge tone="xp">{'⭐'.repeat(getStreakStars(task.streakCount))}</Badge>
-                        )}
-                        {isTaskOverdue(task, today) && <Badge tone="danger">Просрочено</Badge>}
-                        {rewardMultiplier !== 1 && !isTerminal ? (
-                          <span
-                            title={getMultiplierTooltip(task, projects, today)}
-                            className="text-xs text-accent-xp tabular-nums"
-                          >
-                            {multiplierIcon}×{formatMultiplier(rewardMultiplier)}{' '}
-                            {Math.round(task.xp * rewardMultiplier)} XP · {Math.round(task.eternas * rewardMultiplier)} ✦
-                          </span>
-                        ) : (
-                          <span className="text-xs text-text-muted tabular-nums">
-                            {task.xp} XP · {task.eternas} ✦
-                          </span>
-                        )}
+                        <TaskCardMenu onEdit={() => openEditTask(task)} onDelete={() => handleDeleteTask(task)}>
+                          <div className="flex flex-wrap items-center gap-1 px-2 py-1">
+                            {task.streakCount > 0 && <Badge tone="eternas">🔥 ×{task.streakCount}</Badge>}
+                            {getStreakStars(task.streakCount) > 0 && (
+                              <Badge tone="xp">{'⭐'.repeat(getStreakStars(task.streakCount))}</Badge>
+                            )}
+                            {isTaskOverdue(task, today) && <Badge tone="danger">Просрочено</Badge>}
+                          </div>
+                          <div className="px-2 py-1 text-xs text-text-muted">
+                            {rewardMultiplier !== 1 && !isTerminal ? (
+                              <span title={getMultiplierTooltip(task, projects, today)} className="text-accent-xp">
+                                {multiplierIcon}×{formatMultiplier(rewardMultiplier)}{' '}
+                                {Math.round(task.xp * rewardMultiplier)} XP · {Math.round(task.eternas * rewardMultiplier)} ✦
+                              </span>
+                            ) : (
+                              <span className="tabular-nums">
+                                {task.xp} XP · {task.eternas} ✦
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between gap-2 px-2 py-1">
+                            <span className="text-text-muted">Статус</span>
+                            <TaskStatusSelect status={task.status} onChange={(status) => setTaskStatus(task.id, status)} />
+                          </div>
+                          <div className="flex items-center justify-between gap-2 px-2 py-1">
+                            <span className="text-text-muted">Срок</span>
+                            <TaskDueDateControl task={task} onUpdate={(patch) => updateTask(task.id, patch)} />
+                          </div>
+                          <div className="flex items-center justify-between gap-2 px-2 py-1">
+                            <span className="text-text-muted">Проект</span>
+                            <TaskProjectSelect
+                              projectId={task.projectId}
+                              projects={projects}
+                              onChange={(projectId) => updateTask(task.id, { projectId })}
+                            />
+                          </div>
+                        </TaskCardMenu>
                       </div>
                     </div>
                   );
@@ -306,6 +323,7 @@ export default function TaskBoard({ tasks, projects }: TaskBoardProps) {
         open={taskModalOpen}
         onClose={() => setTaskModalOpen(false)}
         onSubmit={handleTaskSubmit}
+        initialTask={editingTask}
         defaultTaskBoardColumnId={createInColumnId}
       />
       {dialog}
