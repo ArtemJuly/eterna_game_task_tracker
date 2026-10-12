@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { GoalNodeType } from '../types';
 import type { NewGoalNodeInput } from '../hooks/useGoalMap';
 import { useProjects } from '../hooks/useProjects';
@@ -24,6 +24,7 @@ export default function GoalNodeModal({ open, onClose, onSubmit, parentId }: Goa
   const [trackId, setTrackId] = useState('');
   const [stageId, setStageId] = useState('');
   const [taskId, setTaskId] = useState('');
+  const [taskSearch, setTaskSearch] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -33,9 +34,22 @@ export default function GoalNodeModal({ open, onClose, onSubmit, parentId }: Goa
     setTrackId('');
     setStageId('');
     setTaskId('');
+    setTaskSearch('');
   }, [open]);
 
   const stagesForTrack = tracks.find((t) => t.id === trackId)?.stages ?? [];
+
+  const taskSearchResults = useMemo(() => {
+    const query = taskSearch.trim().toLowerCase();
+    if (!query) return [];
+    return tasks
+      .filter((t) => t.status === 'planned' || t.status === 'in_progress')
+      .filter((t) => {
+        const projectTitle = t.projectId ? (projects.find((p) => p.id === t.projectId)?.title ?? '') : '';
+        return t.title.toLowerCase().includes(query) || projectTitle.toLowerCase().includes(query);
+      })
+      .slice(0, 8);
+  }, [tasks, taskSearch, projects]);
   const emptyInput = { title: '', projectId: null, trackId: null, stageId: null, taskId: null };
 
   function handleSubmit(e: React.FormEvent) {
@@ -151,18 +165,57 @@ export default function GoalNodeModal({ open, onClose, onSubmit, parentId }: Goa
         {type === 'task' && (
           <div>
             <label className="mb-1 block text-sm text-text-muted">Задача</label>
-            <select
-              value={taskId}
-              onChange={(e) => setTaskId(e.target.value)}
-              className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
-            >
-              <option value="">Выбрать задачу</option>
-              {tasks.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.title}
-                </option>
-              ))}
-            </select>
+            {taskId ? (
+              <div className="flex items-center justify-between rounded border border-border bg-bg px-3 py-2 text-sm">
+                <span className="truncate text-text-primary">{tasks.find((t) => t.id === taskId)?.title ?? '—'}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTaskId('');
+                    setTaskSearch('');
+                  }}
+                  className="text-text-muted hover:text-danger"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1">
+                <input
+                  type="text"
+                  autoFocus
+                  value={taskSearch}
+                  onChange={(e) => setTaskSearch(e.target.value)}
+                  placeholder="Начни вводить название невыполненной задачи..."
+                  className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp"
+                />
+                {taskSearch.trim() && (
+                  <div className="flex max-h-48 flex-col gap-0.5 overflow-y-auto rounded border border-border bg-bg p-1">
+                    {taskSearchResults.length === 0 ? (
+                      <div className="px-2 py-1.5 text-xs text-text-muted">Ничего не найдено</div>
+                    ) : (
+                      taskSearchResults.map((t) => {
+                        const project = t.projectId ? projects.find((p) => p.id === t.projectId) : undefined;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => {
+                              setTaskId(t.id);
+                              setTaskSearch('');
+                            }}
+                            className="flex flex-col items-start rounded px-2 py-1.5 text-left hover:bg-overlay/[0.06]"
+                          >
+                            <span className="text-sm text-text-primary">{t.title}</span>
+                            {project && <span className="text-xs text-text-muted">{project.title}</span>}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
