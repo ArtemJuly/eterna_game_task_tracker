@@ -1,12 +1,14 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { usePomodoros } from '../../hooks/usePomodoros';
+import { useBreak } from '../../hooks/useBreak';
 import { useTasks } from '../../hooks/useTasks';
 import { useProjects } from '../../hooks/useProjects';
 import { formatRemaining } from '../../utils/formatTime';
 
 export default function SidebarPomodoro() {
   const { active, startPomodoro, completePomodoro, cancelPomodoro } = usePomodoros();
+  const { activeBreak, startBreak, completeBreak, cancelBreak } = useBreak();
   const { tasks } = useTasks();
   const { projects } = useProjects();
   const [now, setNow] = useState(Date.now());
@@ -14,11 +16,11 @@ export default function SidebarPomodoro() {
   const isRunning = active?.status === 'running';
 
   useLayoutEffect(() => {
-    if (!isRunning) return;
+    if (!isRunning && !activeBreak) return;
     setNow(Date.now());
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, [isRunning]);
+  }, [isRunning, activeBreak]);
 
   const endTime = isRunning && active?.endsAt ? new Date(active.endsAt).getTime() : null;
 
@@ -30,14 +32,48 @@ export default function SidebarPomodoro() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, isRunning, endTime]);
 
-  if (!active) {
+  const breakEndTime = activeBreak ? new Date(activeBreak.endsAt).getTime() : null;
+
+  useEffect(() => {
+    if (breakEndTime === null) return;
+    if (now >= breakEndTime) {
+      completeBreak();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [now, breakEndTime]);
+
+  if (activeBreak) {
+    const remainingMs = Math.max(0, (breakEndTime ?? 0) - now);
     return (
       <div className="border-t border-border px-4 py-3">
+        <div className="text-xs text-text-muted">☕ Перерыв идёт</div>
+        <div className="mt-1 text-lg font-semibold tabular-nums text-accent-eternas">{formatRemaining(remainingMs)}</div>
+        <div className="mt-2 flex gap-2">
+          <button
+            onClick={cancelBreak}
+            className="rounded px-2 py-1 text-xs text-text-muted hover:bg-overlay/[0.04] hover:text-text-primary"
+          >
+            Прервать
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!active) {
+    return (
+      <div className="flex gap-2 border-t border-border px-4 py-3">
         <button
           onClick={() => startPomodoro()}
-          className="w-full rounded border border-border px-2 py-1.5 text-xs text-text-muted hover:bg-overlay/[0.04] hover:text-text-primary"
+          className="flex-1 rounded border border-border px-2 py-1.5 text-xs text-text-muted hover:bg-overlay/[0.04] hover:text-text-primary"
         >
           🍅 Начать помидор
+        </button>
+        <button
+          onClick={startBreak}
+          className="flex-1 rounded border border-border px-2 py-1.5 text-xs text-text-muted hover:bg-overlay/[0.04] hover:text-text-primary"
+        >
+          ☕ Начать перерыв
         </button>
       </div>
     );

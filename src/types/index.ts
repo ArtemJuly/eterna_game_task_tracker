@@ -111,10 +111,17 @@ export interface Settings {
   pomodoroDurationMinutes: number;
   pomodoroBonusXp: number;
   pomodoroBonusEternas: number;
+  breakDurationMinutes: number;
   streakBonusStepXp: number;
   streakBonusStepEternas: number;
   theme: ThemeName;
   aiApiKey: string;
+}
+
+export interface ActiveBreak {
+  startedAt: string;
+  endsAt: string;
+  durationMinutes: number;
 }
 
 export interface TrackStage {

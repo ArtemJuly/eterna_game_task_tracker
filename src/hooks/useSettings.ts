@@ -7,6 +7,7 @@ function normalizeSettings(raw: Settings): Settings {
     pomodoroDurationMinutes: raw.pomodoroDurationMinutes ?? 25,
     pomodoroBonusXp: raw.pomodoroBonusXp ?? 5,
     pomodoroBonusEternas: raw.pomodoroBonusEternas ?? 5,
+    breakDurationMinutes: raw.breakDurationMinutes ?? 5,
     streakBonusStepXp: raw.streakBonusStepXp ?? 5,
     streakBonusStepEternas: raw.streakBonusStepEternas ?? 5,
     theme: raw.theme ?? 'dark',
@@ -19,6 +20,7 @@ export function useSettings(): {
   setPomodoroDuration: (minutes: number) => void;
   setPomodoroBonusXp: (xp: number) => void;
   setPomodoroBonusEternas: (eternas: number) => void;
+  setBreakDuration: (minutes: number) => void;
   setStreakBonusStepXp: (xp: number) => void;
   setStreakBonusStepEternas: (eternas: number) => void;
   setTheme: (theme: ThemeName) => void;
@@ -37,6 +39,10 @@ export function useSettings(): {
 
   function setPomodoroBonusEternas(eternas: number) {
     setSettings((prev) => ({ ...prev, pomodoroBonusEternas: eternas }));
+  }
+
+  function setBreakDuration(minutes: number) {
+    setSettings((prev) => ({ ...prev, breakDurationMinutes: minutes }));
   }
 
   function setStreakBonusStepXp(xp: number) {
@@ -60,6 +66,7 @@ export function useSettings(): {
     setPomodoroDuration,
     setPomodoroBonusXp,
     setPomodoroBonusEternas,
+    setBreakDuration,
     setStreakBonusStepXp,
     setStreakBonusStepEternas,
     setTheme,

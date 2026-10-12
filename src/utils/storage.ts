@@ -16,6 +16,7 @@ export const STORAGE_KEYS = {
   taskBoardColumns: 'eterna_task_board_columns',
   timeCategories: 'eterna_time_categories',
   timeEntries: 'eterna_time_entries',
+  activeBreak: 'eterna_active_break',
 } as const;
 
 export function readStorage<T>(key: string, fallback: T): T {

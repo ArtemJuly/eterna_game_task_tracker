@@ -28,6 +28,7 @@ export default function Settings() {
     setPomodoroDuration,
     setPomodoroBonusXp,
     setPomodoroBonusEternas,
+    setBreakDuration,
     setStreakBonusStepXp,
     setStreakBonusStepEternas,
     setTheme,
@@ -38,6 +39,7 @@ export default function Settings() {
   const [durationInput, setDurationInput] = useState(String(settings.pomodoroDurationMinutes));
   const [bonusXpInput, setBonusXpInput] = useState(String(settings.pomodoroBonusXp));
   const [bonusEternasInput, setBonusEternasInput] = useState(String(settings.pomodoroBonusEternas));
+  const [breakDurationInput, setBreakDurationInput] = useState(String(settings.breakDurationMinutes));
   const [streakStepXpInput, setStreakStepXpInput] = useState(String(settings.streakBonusStepXp));
   const [streakStepEternasInput, setStreakStepEternasInput] = useState(String(settings.streakBonusStepEternas));
   const [aiApiKeyInput, setAiApiKeyInput] = useState(settings.aiApiKey);
@@ -58,6 +60,12 @@ export default function Settings() {
     const eternas = Math.max(0, Number(bonusEternasInput) || 0);
     setPomodoroBonusEternas(eternas);
     setBonusEternasInput(String(eternas));
+  }
+
+  function handleBreakDurationBlur() {
+    const minutes = Math.max(1, Math.min(60, Number(breakDurationInput) || settings.breakDurationMinutes));
+    setBreakDuration(minutes);
+    setBreakDurationInput(String(minutes));
   }
 
   function handleStreakStepXpBlur() {
@@ -242,6 +250,17 @@ export default function Settings() {
           value={durationInput}
           onChange={(e) => setDurationInput(e.target.value)}
           onBlur={handleDurationBlur}
+          className="w-32 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary tabular-nums outline-none focus:border-accent-xp"
+        />
+
+        <label className="mb-1 mt-4 block text-sm text-text-muted">Длительность перерыва, минут</label>
+        <input
+          type="number"
+          min={1}
+          max={60}
+          value={breakDurationInput}
+          onChange={(e) => setBreakDurationInput(e.target.value)}
+          onBlur={handleBreakDurationBlur}
           className="w-32 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary tabular-nums outline-none focus:border-accent-xp"
         />
 

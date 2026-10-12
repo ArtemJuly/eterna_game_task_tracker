@@ -1,4 +1,5 @@
 import type {
+  ActiveBreak,
   ActivePomodoro,
   BoardColumn,
   Character,
@@ -35,10 +36,13 @@ export const pomodorosStore = createStore<PomodoroSession[]>(STORAGE_KEYS.pomodo
 
 export const activePomodoroStore = createStore<ActivePomodoro | null>(STORAGE_KEYS.activePomodoro, null);
 
+export const activeBreakStore = createStore<ActiveBreak | null>(STORAGE_KEYS.activeBreak, null);
+
 export const settingsStore = createStore<Settings>(STORAGE_KEYS.settings, {
   pomodoroDurationMinutes: 25,
   pomodoroBonusXp: 5,
   pomodoroBonusEternas: 5,
+  breakDurationMinutes: 5,
   streakBonusStepXp: 5,
   streakBonusStepEternas: 5,
   theme: 'dark',
