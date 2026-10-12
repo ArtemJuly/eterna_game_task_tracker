@@ -29,7 +29,7 @@ export default function TaskStatusSelect({ status, onChange }: TaskStatusSelectP
       }}
       onChange={(e) => onChange(e.target.value as TaskStatus)}
       title="Изменить статус задачи"
-      className={`cursor-pointer rounded-[4px] border px-2 py-0.5 text-xs font-medium outline-none ${STATUS_CLASSES[status]}`}
+      className={`max-w-full min-w-0 truncate cursor-pointer rounded-[4px] border px-2 py-0.5 text-xs font-medium outline-none ${STATUS_CLASSES[status]}`}
     >
       {(Object.keys(STATUS_LABEL) as TaskStatus[]).map((key) => (
         <option key={key} value={key}>
