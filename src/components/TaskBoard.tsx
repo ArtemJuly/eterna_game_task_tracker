@@ -21,10 +21,10 @@ function TaskDoneCircle({ done, onToggle }: { done: boolean; onToggle: () => voi
       type="button"
       onClick={onToggle}
       title={done ? 'Вернуть в работу' : 'Отметить выполненной'}
-      className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold leading-none transition-colors ${
+      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold leading-none transition-colors ${
         done
           ? 'border-success bg-success text-white'
-          : 'border-text-muted text-transparent hover:border-accent-xp hover:bg-accent-xp/10'
+          : 'border-text-muted/60 text-transparent hover:border-accent-xp hover:bg-accent-xp/10'
       }`}
     >
       ✓
@@ -151,11 +151,11 @@ export default function TaskBoard({ tasks, projects }: TaskBoardProps) {
                 setDraggedTaskId(null);
                 setDragOverColumnId(null);
               }}
-              className={`flex w-72 shrink-0 flex-col gap-2 rounded-lg border p-3 transition-colors ${
-                dragOverColumnId === col.id ? 'border-accent-xp bg-accent-xp/[0.06]' : 'border-border bg-surface'
+              className={`flex w-72 shrink-0 flex-col gap-1.5 rounded-lg p-2 transition-colors ${
+                dragOverColumnId === col.id ? 'bg-accent-xp/[0.06] ring-1 ring-accent-xp/40' : ''
               }`}
             >
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center justify-between gap-2 px-1">
                 {renamingColumnId === col.id ? (
                   <input
                     autoFocus
@@ -188,7 +188,7 @@ export default function TaskBoard({ tasks, projects }: TaskBoardProps) {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5">
                 {colTasks.map((task) => {
                   const isTerminal = task.status === 'done';
                   const rewardMultiplier = getTaskRewardMultiplier(task, projects, today);
@@ -207,7 +207,7 @@ export default function TaskBoard({ tasks, projects }: TaskBoardProps) {
                         setDraggedTaskId(null);
                         setDragOverColumnId(null);
                       }}
-                      className={`flex min-w-0 cursor-grab flex-col gap-1.5 overflow-hidden rounded-lg border border-border bg-bg p-2.5 active:cursor-grabbing ${
+                      className={`group flex min-w-0 cursor-grab flex-col gap-1.5 overflow-hidden rounded-xl border border-border/60 bg-surface p-3 shadow-sm active:cursor-grabbing ${
                         draggedTaskId === task.id ? 'opacity-40' : ''
                       }`}
                     >
@@ -221,8 +221,15 @@ export default function TaskBoard({ tasks, projects }: TaskBoardProps) {
                         >
                           {task.title}
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTask(task)}
+                          className="shrink-0 text-xs text-text-muted opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
+                        >
+                          ✕
+                        </button>
                       </div>
-                      <div className="flex min-w-0 flex-wrap items-center gap-1.5 pl-8">
+                      <div className="flex min-w-0 flex-wrap items-center gap-1.5 pl-7">
                         <TaskProjectSelect
                           projectId={task.projectId}
                           projects={projects}
@@ -248,27 +255,18 @@ export default function TaskBoard({ tasks, projects }: TaskBoardProps) {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 pl-8">
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteTask(task)}
-                          className="text-xs text-text-muted hover:text-danger"
-                        >
-                          Удалить
-                        </button>
-                      </div>
                     </div>
                   );
                 })}
               </div>
 
-              <Button
-                variant="ghost"
+              <button
+                type="button"
                 onClick={() => openCreateTask(isUnassigned ? null : col.id)}
-                className="w-full justify-center"
+                className="flex items-center gap-1.5 rounded px-1 py-1.5 text-left text-sm text-text-muted hover:text-text-primary"
               >
-                + Добавить
-              </Button>
+                <span className="text-base leading-none">+</span> Добавить задачу
+              </button>
             </div>
           );
         })}
