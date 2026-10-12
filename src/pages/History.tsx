@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useHistory } from '../hooks/useHistory';
+import { usePomodoros } from '../hooks/usePomodoros';
+import { useConfirm } from '../hooks/useConfirm';
 import type { HistoryEntry } from '../types';
 
 const PAGE_SIZE = 20;
@@ -24,6 +26,8 @@ function formatDate(iso: string): string {
 
 export default function History() {
   const history = useHistory();
+  const { deletePomodoroHistoryEntry } = usePomodoros();
+  const { confirm, dialog } = useConfirm();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const sorted = useMemo(
@@ -31,6 +35,16 @@ export default function History() {
     [history],
   );
   const visible = sorted.slice(0, visibleCount);
+
+  function handleDeletePomodoro(entry: HistoryEntry) {
+    confirm({
+      title: 'Удалить запись о помидоре?',
+      message: `«${entry.label}» будет убрана из истории, XP и этерны за неё спишутся обратно. Используй это, если помидор задвоился.`,
+      confirmLabel: 'Удалить',
+      danger: true,
+      onConfirm: () => deletePomodoroHistoryEntry(entry.id),
+    });
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,6 +77,16 @@ export default function History() {
                     {entry.eternasDelta} ✦
                   </span>
                 )}
+                {entry.type === 'pomodoro_completed' && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePomodoro(entry)}
+                    className="text-text-muted hover:text-danger"
+                    title="Удалить запись (например, если помидор задвоился)"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -77,6 +101,8 @@ export default function History() {
           Показать ещё
         </button>
       )}
+
+      {dialog}
     </div>
   );
 }

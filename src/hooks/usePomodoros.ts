@@ -60,6 +60,7 @@ export function usePomodoros(): {
   cancelPomodoro: () => void;
   countCompletedForTask: (taskId: string) => number;
   totalMinutesForTask: (taskId: string) => number;
+  deletePomodoroHistoryEntry: (entryId: string) => void;
 } {
   const [sessions, setSessions] = pomodorosStore.useStore();
   const [rawActive, setActive] = activePomodoroStore.useStore();
@@ -159,6 +160,38 @@ export function usePomodoros(): {
     return getTotalMinutesForTask(sessions, taskId);
   }
 
+  // Undoes a pomodoro_completed history entry: reverses the XP/eternas it granted and
+  // removes the best-matching completed session (same label, closest end time), so it
+  // stops double-counting in pomodoro stats/charts too. Used to clean up duplicates.
+  function deletePomodoroHistoryEntry(entryId: string) {
+    const entry = historyStore.getSnapshot().find((h) => h.id === entryId);
+    if (!entry || entry.type !== 'pomodoro_completed') return;
+
+    historyStore.set((prev) => prev.filter((h) => h.id !== entryId));
+    characterStore.set((prev) => ({
+      totalXp: prev.totalXp - entry.xpDelta,
+      eternas: prev.eternas - entry.eternasDelta,
+    }));
+
+    const allTasks = tasksStore.getSnapshot();
+    const allProjects = projectsStore.getSnapshot();
+    function labelFor(s: PomodoroSession): string {
+      if (s.taskId) return allTasks.find((t) => t.id === s.taskId)?.title ?? 'Задача удалена';
+      if (s.projectId) return allProjects.find((p) => p.id === s.projectId)?.title ?? 'Проект удалён';
+      return 'Свободный помидор';
+    }
+
+    const entryTime = new Date(entry.createdAt).getTime();
+    const candidates = sessions.filter((s) => s.status === 'completed' && labelFor(s) === entry.label);
+    if (candidates.length === 0) return;
+    const closest = candidates.reduce((best, s) =>
+      Math.abs(new Date(s.endedAt).getTime() - entryTime) < Math.abs(new Date(best.endedAt).getTime() - entryTime)
+        ? s
+        : best,
+    );
+    setSessions((prev) => prev.filter((s) => s.id !== closest.id));
+  }
+
   return {
     sessions,
     active,
@@ -168,5 +201,6 @@ export function usePomodoros(): {
     cancelPomodoro,
     countCompletedForTask,
     totalMinutesForTask,
+    deletePomodoroHistoryEntry,
   };
 }
