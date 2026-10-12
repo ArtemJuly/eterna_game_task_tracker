@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { usePomodoros } from '../hooks/usePomodoros';
 import { formatRemaining } from '../utils/formatTime';
 import Button from './ui/Button';
@@ -41,20 +41,15 @@ export default function PomodoroTimer({ taskId, projectId, active, showStats = t
   const endTime = isRunningHere && activePomodoro?.endsAt ? new Date(activePomodoro.endsAt).getTime() : null;
   const pausedRemainingMs = isPausedHere || canResumeElsewhere ? (activePomodoro?.remainingMs ?? 0) : null;
 
+  // Auto-completion on expiry is handled once, globally, by the always-mounted
+  // SidebarPomodoro — doing it here too raced it and double-logged the session.
+  // This effect only drives the local countdown display.
   useLayoutEffect(() => {
     if (!isRunningHere) return;
     setNow(Date.now());
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, [isRunningHere]);
-
-  useEffect(() => {
-    if (!isRunningHere || endTime === null) return;
-    if (now >= endTime) {
-      completePomodoro();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [now, isRunningHere, endTime]);
 
   return (
     <div className="flex items-center gap-2">
