@@ -37,7 +37,7 @@ export function getEffectiveTaskCategoryIds(task: Task, projects: Project[]): st
   return project?.timeCategoryIds ?? [];
 }
 
-export function getPomodoroCategoryIds(session: PomodoroSession, tasks: Task[], projects: Project[]): string[] {
+function getPomodoroCategoryIds(session: PomodoroSession, tasks: Task[], projects: Project[]): string[] {
   if (session.taskId) {
     const task = tasks.find((t) => t.id === session.taskId);
     return task ? getEffectiveTaskCategoryIds(task, projects) : [];
@@ -47,6 +47,33 @@ export function getPomodoroCategoryIds(session: PomodoroSession, tasks: Task[], 
     return project?.timeCategoryIds ?? [];
   }
   return [];
+}
+
+// Divides `total` whole minutes evenly across `count` categories so the parts sum back
+// to exactly `total` — the first `total % count` categories get one extra minute.
+function splitEvenly(total: number, count: number): number[] {
+  if (count <= 0) return [];
+  const base = Math.floor(total / count);
+  const remainder = total - base * count;
+  return Array.from({ length: count }, (_, i) => base + (i < remainder ? 1 : 0));
+}
+
+export interface CategoryMinutesSplit {
+  categoryId: string;
+  minutes: number;
+}
+
+// A pomodoro tagged with several categories splits its duration proportionally (evenly)
+// across them instead of counting the full duration under each one.
+export function getPomodoroCategorySplit(
+  session: PomodoroSession,
+  tasks: Task[],
+  projects: Project[],
+): CategoryMinutesSplit[] {
+  const categoryIds = getPomodoroCategoryIds(session, tasks, projects);
+  if (categoryIds.length === 0) return [];
+  const parts = splitEvenly(session.durationMinutes, categoryIds.length);
+  return categoryIds.map((categoryId, i) => ({ categoryId, minutes: parts[i] }));
 }
 
 export interface TimeCategoryReport {
@@ -78,8 +105,8 @@ export function buildTimeReport(
     if (s.status !== 'completed') continue;
     const date = s.endedAt.slice(0, 10);
     if (!isDateInRange(date, start, today)) continue;
-    for (const id of getPomodoroCategoryIds(s, tasks, projects)) {
-      pomodoroByCategory.set(id, (pomodoroByCategory.get(id) ?? 0) + s.durationMinutes);
+    for (const { categoryId, minutes } of getPomodoroCategorySplit(s, tasks, projects)) {
+      pomodoroByCategory.set(categoryId, (pomodoroByCategory.get(categoryId) ?? 0) + minutes);
     }
   }
 
@@ -98,8 +125,9 @@ export interface PomodoroTimeEntry {
   label: string;
 }
 
-// One row per (completed pomodoro, matching category) — a session tagged with two
-// categories shows up once under each, same accounting as the category totals.
+// One row per (completed pomodoro, matching category) — a session tagged with several
+// categories shows up once under each, with its duration split evenly between them (so
+// the rows sum back to the session's real length instead of over-counting).
 export function getPomodoroTimeEntries(
   sessions: PomodoroSession[],
   tasks: Task[],
@@ -108,8 +136,8 @@ export function getPomodoroTimeEntries(
   const result: PomodoroTimeEntry[] = [];
   for (const s of sessions) {
     if (s.status !== 'completed') continue;
-    const categoryIds = getPomodoroCategoryIds(s, tasks, projects);
-    if (categoryIds.length === 0) continue;
+    const split = getPomodoroCategorySplit(s, tasks, projects);
+    if (split.length === 0) continue;
 
     const label = s.taskId
       ? (tasks.find((t) => t.id === s.taskId)?.title ?? 'Задача удалена')
@@ -118,8 +146,9 @@ export function getPomodoroTimeEntries(
         : '';
     const date = s.endedAt.slice(0, 10);
 
-    for (const categoryId of categoryIds) {
-      result.push({ id: `${s.id}-${categoryId}`, categoryId, date, durationMinutes: s.durationMinutes, label });
+    for (const { categoryId, minutes } of split) {
+      if (minutes === 0) continue;
+      result.push({ id: `${s.id}-${categoryId}`, categoryId, date, durationMinutes: minutes, label });
     }
   }
   return result;
