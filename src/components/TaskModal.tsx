@@ -349,6 +349,58 @@ export default function TaskModal({
         </div>
 
         <div>
+          <label className="mb-1 block text-sm text-text-muted">Категории TimeTracker</label>
+          {timeCategoryIds.length === 0 && inheritedCategories.length > 0 && (
+            <p className="mb-2 text-xs text-text-muted">
+              Пока без своих категорий — унаследует от проекта:{' '}
+              {inheritedCategories.map((c) => c.title).join(', ')}
+            </p>
+          )}
+          {timeCategoryIds.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {timeCategoryIds.map((id) => {
+                const category = timeCategories.find((c) => c.id === id);
+                return (
+                  <span
+                    key={id}
+                    className="inline-flex items-center gap-1.5 rounded-[4px] border border-border bg-overlay/5 px-2 py-1 text-xs text-text-primary"
+                  >
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: category?.color }} />
+                    {category?.title ?? '—'}
+                    <button
+                      type="button"
+                      onClick={() => setTimeCategoryIds((prev) => prev.filter((cid) => cid !== id))}
+                      className="text-text-muted hover:text-danger"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          <select
+            value=""
+            onChange={(e) => {
+              if (e.target.value) setTimeCategoryIds((prev) => [...prev, e.target.value]);
+            }}
+            disabled={timeCategories.filter((c) => !timeCategoryIds.includes(c.id)).length === 0}
+            className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp disabled:opacity-50"
+          >
+            <option value="" disabled>
+              {timeCategories.length === 0 ? 'Нет категорий — создай в TimeTracker' : '+ Выбрать категорию'}
+            </option>
+            {timeCategories
+              .filter((c) => !timeCategoryIds.includes(c.id))
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+          </select>
+        </div>
+
+        <div>
           {trackLinks.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {trackLinks.map((link) => {
@@ -420,58 +472,6 @@ export default function TaskModal({
               + Привязать к треку
             </button>
           )}
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm text-text-muted">Категории TimeTracker</label>
-          {timeCategoryIds.length === 0 && inheritedCategories.length > 0 && (
-            <p className="mb-2 text-xs text-text-muted">
-              Пока без своих категорий — унаследует от проекта:{' '}
-              {inheritedCategories.map((c) => c.title).join(', ')}
-            </p>
-          )}
-          {timeCategoryIds.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-2">
-              {timeCategoryIds.map((id) => {
-                const category = timeCategories.find((c) => c.id === id);
-                return (
-                  <span
-                    key={id}
-                    className="inline-flex items-center gap-1.5 rounded-[4px] border border-border bg-overlay/5 px-2 py-1 text-xs text-text-primary"
-                  >
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: category?.color }} />
-                    {category?.title ?? '—'}
-                    <button
-                      type="button"
-                      onClick={() => setTimeCategoryIds((prev) => prev.filter((cid) => cid !== id))}
-                      className="text-text-muted hover:text-danger"
-                    >
-                      ✕
-                    </button>
-                  </span>
-                );
-              })}
-            </div>
-          )}
-          <select
-            value=""
-            onChange={(e) => {
-              if (e.target.value) setTimeCategoryIds((prev) => [...prev, e.target.value]);
-            }}
-            disabled={timeCategories.filter((c) => !timeCategoryIds.includes(c.id)).length === 0}
-            className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-xp disabled:opacity-50"
-          >
-            <option value="" disabled>
-              {timeCategories.length === 0 ? 'Нет категорий — создай в TimeTracker' : '+ Выбрать категорию'}
-            </option>
-            {timeCategories
-              .filter((c) => !timeCategoryIds.includes(c.id))
-              .map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title}
-                </option>
-              ))}
-          </select>
         </div>
       </form>
     </Modal>

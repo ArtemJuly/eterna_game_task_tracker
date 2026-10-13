@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Project, Task } from '../types';
 import { useTasks } from '../hooks/useTasks';
+import { useTimeCategories } from '../hooks/useTimeCategories';
 import { useConfirm } from '../hooks/useConfirm';
 import { getTodayDateString } from '../utils/today';
 import { getTaskRewardMultiplier, getMultiplierIcon, getMultiplierTooltip, formatMultiplier } from '../utils/taskRewards';
@@ -50,6 +51,7 @@ export default function TaskBoard({ tasks, projects }: TaskBoardProps) {
     renameTaskBoardColumn,
     deleteTaskBoardColumn,
   } = useTasks();
+  const { categories: timeCategories } = useTimeCategories();
   const { confirm, dialog } = useConfirm();
   const today = getTodayDateString();
 
@@ -269,6 +271,57 @@ export default function TaskBoard({ tasks, projects }: TaskBoardProps) {
                               projects={projects}
                               onChange={(projectId) => updateTask(task.id, { projectId })}
                             />
+                          </div>
+                          <div className="px-2 py-1">
+                            <div className="mb-1 text-text-muted">Категория TimeTracker</div>
+                            {task.timeCategoryIds.length > 0 && (
+                              <div className="mb-1 flex flex-wrap gap-1">
+                                {task.timeCategoryIds.map((id) => {
+                                  const category = timeCategories.find((c) => c.id === id);
+                                  return (
+                                    <span
+                                      key={id}
+                                      className="inline-flex items-center gap-1 rounded-[4px] border border-border bg-overlay/5 px-1.5 py-0.5 text-[11px] text-text-primary"
+                                    >
+                                      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: category?.color }} />
+                                      {category?.title ?? '—'}
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          updateTask(task.id, {
+                                            timeCategoryIds: task.timeCategoryIds.filter((cid) => cid !== id),
+                                          })
+                                        }
+                                        className="text-text-muted hover:text-danger"
+                                      >
+                                        ✕
+                                      </button>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  updateTask(task.id, { timeCategoryIds: [...task.timeCategoryIds, e.target.value] });
+                                }
+                              }}
+                              disabled={timeCategories.filter((c) => !task.timeCategoryIds.includes(c.id)).length === 0}
+                              className="w-full rounded border border-border bg-bg px-2 py-1 text-xs text-text-primary outline-none focus:border-accent-xp disabled:opacity-50"
+                            >
+                              <option value="" disabled>
+                                {timeCategories.length === 0 ? 'Нет категорий' : '+ Категория'}
+                              </option>
+                              {timeCategories
+                                .filter((c) => !task.timeCategoryIds.includes(c.id))
+                                .map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.title}
+                                  </option>
+                                ))}
+                            </select>
                           </div>
                         </TaskCardMenu>
                       </div>
