@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Local sync server's data file — machine-specific, never committed
+server/data/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

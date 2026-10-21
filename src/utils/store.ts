@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { readStorage, writeStorage } from './storage';
+import { pushToServer, registerStoreKey } from './syncClient';
 
 export function createStore<T>(key: string, fallback: T) {
   let state: T;
@@ -16,6 +17,16 @@ export function createStore<T>(key: string, fallback: T) {
   function set(next: T | ((prev: T) => T)) {
     ensureInitialized();
     state = typeof next === 'function' ? (next as (prev: T) => T)(state) : next;
+    writeStorage(key, state);
+    pushToServer(key, state);
+    listeners.forEach((l) => l());
+  }
+
+  // Applied when the local sync server has a newer value from another browser —
+  // skips re-pushing it back (that would just echo it to the server pointlessly).
+  function applyExternal(value: T) {
+    ensureInitialized();
+    state = value;
     writeStorage(key, state);
     listeners.forEach((l) => l());
   }
@@ -43,6 +54,12 @@ export function createStore<T>(key: string, fallback: T) {
     const snapshot = useSyncExternalStore(subscribe, getSnapshot);
     return [snapshot, set];
   }
+
+  registerStoreKey(key, {
+    applyExternal: (value) => applyExternal(value as T),
+    getCurrent: getSnapshot,
+    fallback,
+  });
 
   return { useStore, set, getSnapshot };
 }
