@@ -1,55 +1,71 @@
-export function playDing(): void {
+let sharedCtx: AudioContext | null = null;
+
+function getAudioContext(): AudioContext | null {
   try {
-    const AudioContextClass = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new AudioContextClass();
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    oscillator.type = 'sine';
-    oscillator.frequency.value = 880;
-
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-
-    oscillator.start();
-    oscillator.stop(ctx.currentTime + 0.8);
-    oscillator.onended = () => ctx.close();
+    if (!sharedCtx) {
+      const AudioContextClass =
+        window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      sharedCtx = new AudioContextClass();
+    }
+    return sharedCtx;
   } catch {
-    // audio not available in this environment — fail silently
+    return null;
+  }
+}
+
+// Safari (more strictly than Chrome) only lets an AudioContext actually produce
+// sound once it's been resumed from inside a real user gesture — a context
+// created fresh from a timer callback (like a pomodoro finishing on its own)
+// just stays silently suspended. Call this from click handlers so the shared
+// context is unlocked well before any timer-driven sound needs to play.
+export function unlockAudio(): void {
+  const ctx = getAudioContext();
+  if (ctx && ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+}
+
+function playTone(ctx: AudioContext, freq: number, startAt: number, duration: number, type: OscillatorType, peakGain: number) {
+  const oscillator = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.value = freq;
+
+  gain.gain.setValueAtTime(0, startAt);
+  gain.gain.linearRampToValueAtTime(peakGain, startAt + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
+
+  oscillator.connect(gain);
+  gain.connect(ctx.destination);
+
+  oscillator.start(startAt);
+  oscillator.stop(startAt + duration);
+}
+
+export function playDing(): void {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const play = () => playTone(ctx, 880, ctx.currentTime, 0.8, 'sine', 0.3);
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(play).catch(() => {});
+  } else {
+    play();
   }
 }
 
 // Two soft descending notes on a triangle wave — deliberately distinct from playDing's
 // single sine tone, so a finished break doesn't sound like a finished pomodoro.
 export function playChime(): void {
-  try {
-    const AudioContextClass = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new AudioContextClass();
-    const notes = [659.25, 523.25];
-
-    notes.forEach((freq, i) => {
-      const startAt = ctx.currentTime + i * 0.22;
-      const oscillator = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      oscillator.type = 'triangle';
-      oscillator.frequency.value = freq;
-
-      gain.gain.setValueAtTime(0, startAt);
-      gain.gain.linearRampToValueAtTime(0.25, startAt + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001, startAt + 0.6);
-
-      oscillator.connect(gain);
-      gain.connect(ctx.destination);
-
-      oscillator.start(startAt);
-      oscillator.stop(startAt + 0.6);
-      if (i === notes.length - 1) oscillator.onended = () => ctx.close();
-    });
-  } catch {
-    // audio not available in this environment — fail silently
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const notes = [659.25, 523.25];
+  const play = () => {
+    notes.forEach((freq, i) => playTone(ctx, freq, ctx.currentTime + i * 0.22, 0.6, 'triangle', 0.25));
+  };
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(play).catch(() => {});
+  } else {
+    play();
   }
 }
