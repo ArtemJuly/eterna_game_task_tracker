@@ -42,6 +42,21 @@ export default function SidebarPomodoro() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, breakEndTime]);
 
+  // Show the countdown in the tab title so it's visible without switching back
+  // to this tab — only while something is actually ticking (not while paused).
+  // SidebarPomodoro is always mounted (part of the persistent sidebar), so this
+  // branching alone is enough to always leave the title in the right state —
+  // no unmount cleanup needed.
+  useEffect(() => {
+    if (activeBreak && breakEndTime !== null) {
+      document.title = `☕ ${formatRemaining(Math.max(0, breakEndTime - now))} — eterna`;
+    } else if (isRunning && endTime !== null) {
+      document.title = `🍅 ${formatRemaining(Math.max(0, endTime - now))} — eterna`;
+    } else {
+      document.title = 'eterna';
+    }
+  }, [now, isRunning, endTime, activeBreak, breakEndTime]);
+
   if (activeBreak) {
     const remainingMs = Math.max(0, (breakEndTime ?? 0) - now);
     return (
