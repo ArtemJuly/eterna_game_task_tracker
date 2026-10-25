@@ -12,8 +12,16 @@ import {
 } from '../hooks/stores';
 import { pushToast } from '../hooks/useToast';
 import { applyBackup, exportBackup, parseBackupFile } from '../utils/backup';
+import { playChime, playDing } from '../utils/sound';
+import { notify, requestNotificationPermission } from '../utils/notify';
 import Button from '../components/ui/Button';
 import type { ThemeName } from '../types';
+
+const NOTIFICATION_PERMISSION_LABEL: Record<NotificationPermission, string> = {
+  granted: '✅ разрешены',
+  denied: '🚫 запрещены (поменять можно только в настройках Safari для этого сайта)',
+  default: '— ещё не запрошены',
+};
 
 const THEME_OPTIONS: { value: ThemeName; label: string; bg: string; surface: string; accent: string }[] = [
   { value: 'dark', label: 'Тёмная (по умолчанию)', bg: '#0f1117', surface: '#181c25', accent: '#7c6ff7' },
@@ -43,6 +51,19 @@ export default function Settings() {
   const [streakStepXpInput, setStreakStepXpInput] = useState(String(settings.streakBonusStepXp));
   const [streakStepEternasInput, setStreakStepEternasInput] = useState(String(settings.streakBonusStepEternas));
   const [aiApiKeyInput, setAiApiKeyInput] = useState(settings.aiApiKey);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>(
+    'Notification' in window ? Notification.permission : 'unsupported',
+  );
+
+  function handleRequestNotifications() {
+    requestNotificationPermission();
+    // requestPermission() is async; poll briefly so the UI picks up the result
+    // as soon as the user answers the browser's own prompt.
+    const check = setInterval(() => {
+      if ('Notification' in window) setNotificationPermission(Notification.permission);
+    }, 300);
+    setTimeout(() => clearInterval(check), 10000);
+  }
 
   function handleDurationBlur() {
     const minutes = Math.max(1, Math.min(180, Number(durationInput) || settings.pomodoroDurationMinutes));
@@ -287,6 +308,39 @@ export default function Settings() {
               className="w-32 rounded border border-border bg-bg px-3 py-2 text-sm text-text-primary tabular-nums outline-none focus:border-accent-xp"
             />
           </div>
+        </div>
+
+        <div className="mt-5 border-t border-border pt-4">
+          <label className="mb-1 block text-sm text-text-muted">Звук и уведомления</label>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="secondary" onClick={() => playDing()}>
+              🔔 Проверить звук помидора
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => playChime()}>
+              🔔 Проверить звук перерыва
+            </Button>
+          </div>
+          <p className="mt-3 text-xs text-text-muted">
+            Уведомления браузера:{' '}
+            {notificationPermission === 'unsupported'
+              ? 'не поддерживаются этим браузером'
+              : NOTIFICATION_PERMISSION_LABEL[notificationPermission]}
+          </p>
+          {notificationPermission === 'default' && (
+            <Button type="button" variant="secondary" className="mt-2" onClick={handleRequestNotifications}>
+              Запросить разрешение на уведомления
+            </Button>
+          )}
+          {notificationPermission === 'granted' && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="mt-2"
+              onClick={() => notify('Тестовое уведомление 🔔', 'Если видишь это — уведомления работают')}
+            >
+              Проверить уведомление
+            </Button>
+          )}
         </div>
       </section>
 
