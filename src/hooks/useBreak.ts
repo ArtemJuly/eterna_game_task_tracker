@@ -1,6 +1,7 @@
 import { activeBreakStore, settingsStore } from './stores';
 import type { ActiveBreak } from '../types';
 import { playChime } from '../utils/sound';
+import { notify, requestNotificationPermission } from '../utils/notify';
 import { pushToast } from './useToast';
 
 export function useBreak(): {
@@ -13,6 +14,7 @@ export function useBreak(): {
 
   function startBreak() {
     if (activeBreak) return;
+    requestNotificationPermission();
     const durationMinutes = settingsStore.getSnapshot().breakDurationMinutes ?? 5;
     const now = new Date();
     setActiveBreak({
@@ -26,6 +28,7 @@ export function useBreak(): {
     if (!activeBreak) return;
     setActiveBreak(null);
     playChime();
+    notify('Перерыв закончен ☕', 'Пора возвращаться к делам');
     pushToast('Перерыв закончен ☕', 'success');
   }
 

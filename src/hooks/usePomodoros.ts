@@ -11,6 +11,7 @@ import type { ActivePomodoro, PomodoroSession } from '../types';
 import { generateId } from '../utils/ids';
 import { pushToast } from './useToast';
 import { playDing } from '../utils/sound';
+import { notify, requestNotificationPermission } from '../utils/notify';
 import { triggerXpPulse } from './useXpPulse';
 import { getCompletedCountForTask, getTotalMinutesForTask } from '../utils/pomodoroStats';
 
@@ -68,6 +69,7 @@ export function usePomodoros(): {
 
   function startPomodoro(target: PomodoroTarget = {}) {
     if (active) return;
+    requestNotificationPermission();
     const durationMinutes = settingsStore.getSnapshot().pomodoroDurationMinutes;
     const now = new Date();
     setActive({
@@ -137,6 +139,9 @@ export function usePomodoros(): {
       ]);
 
       triggerXpPulse();
+      // A system notification survives the tab being backgrounded (very likely
+      // for a 25-minute focus timer) in a way in-page audio alone can't.
+      notify('Помидор завершён 🍅', label);
     }
   }
 
