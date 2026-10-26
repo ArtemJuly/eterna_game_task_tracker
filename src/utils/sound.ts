@@ -29,19 +29,20 @@ function getChimeElement(): HTMLAudioElement {
 }
 
 function primeElement(el: HTMLAudioElement): void {
-  const playPromise = el.play();
-  if (playPromise && typeof playPromise.then === "function") {
-    playPromise
-      .then(() => {
-        el.pause();
-        el.currentTime = 0;
-      })
-      .catch(() => {
-        // Still locked — will retry on the next gesture/visibility event.
-      });
-  } else {
+  // Muted so priming (play immediately followed by pause) is never audible as
+  // a stray blip, no matter how the timing of play()/pause() lines up.
+  const previousVolume = el.volume;
+  el.volume = 0;
+  const restore = () => {
     el.pause();
     el.currentTime = 0;
+    el.volume = previousVolume;
+  };
+  const playPromise = el.play();
+  if (playPromise && typeof playPromise.then === "function") {
+    playPromise.then(restore).catch(restore);
+  } else {
+    restore();
   }
 }
 
